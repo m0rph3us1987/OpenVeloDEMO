@@ -167,4 +167,29 @@ describe('Layout sidebar back/forward highlight', () => {
     expect(recipes.className).toContain('bg-accent');
     expect(dashboard.className).not.toContain('bg-accent');
   });
+
+  it('starting at a non-zero history index, Back moves accent to the previous route', () => {
+    const { back } = renderWithHistory(
+      ['/', '/recipes', '/shopping-cart'],
+      2,
+    );
+    back();
+    const recipes = screen.getByRole('link', { name: 'Recipes' });
+    const cart = screen.getByRole('link', { name: 'Shopping Cart' });
+    expect(recipes.className).toContain('bg-accent');
+    expect(cart.className).not.toContain('bg-accent');
+  });
+
+  it('highlight follows Back across two steps when starting at a non-zero history index', () => {
+    const { back } = renderWithHistory(
+      ['/', '/recipes', '/shopping-cart'],
+      2,
+    );
+    back();
+    back();
+    const dashboard = screen.getByRole('link', { name: 'Dashboard' });
+    const recipes = screen.getByRole('link', { name: 'Recipes' });
+    expect(dashboard.className).toContain('bg-accent');
+    expect(recipes.className).not.toContain('bg-accent');
+  });
 });
