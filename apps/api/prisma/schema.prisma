@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Ingredient {
+  id               String              @id @default(cuid())
+  name             String
+  category         String
+  defaultUnit      String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  recipeIngredients RecipeIngredient[]
+  cookLogs         CookLog[]
+}
+
+model Recipe {
+  id          String             @id @default(cuid())
+  title       String
+  description String?
+  servings    Int                @default(1)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  ingredients RecipeIngredient[]
+  mealSlots   MealPlanSlot[]
+  cookLogs    CookLog[]
+  cartSnapshots CartSnapshot[]
+}
+
+model RecipeIngredient {
+  id           String     @id @default(cuid())
+  recipeId     String
+  ingredientId String
+  quantity     Float
+  unit         String
+  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@index([recipeId])
+  @@index([ingredientId])
+}
+
+model MealPlanSlot {
+  id        String   @id @default(cuid())
+  date      DateTime
+  slot      String
+  recipeId  String
+  servings  Int      @default(1)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+
+  @@index([recipeId])
+}
+
+model CookLog {
+  id           String     @id @default(cuid())
+  recipeId     String
+  ingredientId String?
+  cookedAt     DateTime   @default(now())
+  notes        String?
+  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+  ingredient   Ingredient? @relation(fields: [ingredientId], references: [id])
+
+  @@index([recipeId])
+}
+
+model CartSnapshot {
+  id        String   @id @default(cuid())
+  recipeId  String?
+  takenAt   DateTime @default(now())
+  itemsJson String
+  recipe    Recipe?  @relation(fields: [recipeId], references: [id])
+
+  @@index([recipeId])
+}
