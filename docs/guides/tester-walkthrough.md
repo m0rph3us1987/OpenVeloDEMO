@@ -3,7 +3,7 @@ type: Guide
 title: Tester Walkthrough
 description: Navigation steps and expected UI behaviors for each route in the OpenVelo web app.
 tags: [guide, tester, ui]
-timestamp: 2026-07-26T19:12:38Z
+timestamp: 2026-07-26T19:32:25Z
 ---
 
 # Prerequisites
@@ -68,6 +68,7 @@ See [Recipes Page](/web/recipes.md) for the full add/edit/delete interaction ste
 - An `Add ingredient` button, category filters, and a table of persisted ingredients.
 - On a fresh database the table is pre-populated with seven demo ingredients (`Beef`, `Tomato`, `Milk`, `Rice`, `Salt`, `Pepper`, `Olive Oil`) inserted by the [Database Bootstrap](/architecture/db-bootstrap.md) seed.
 - Users can create, edit, and delete ingredients through forms and confirmation dialogs.
+- Deleting an ingredient that is referenced by a recipe, a cook-log row, or a shopping-cart line succeeds and silently removes those dependent rows (Recipes themselves, other ingredients, and unrelated cart lines are untouched). If a deletion is blocked by a foreign key the cascade does not cover, the dialog surfaces the API error inline as `<error> (<code>)` — for example `Ingredient is referenced by other records (REFERENCED_BY_OTHER_RECORD)`.
 - Loading, empty-filter, request-error, and field-validation states are visible and actionable.
 
 Follow the complete interaction steps in [Ingredients Page](/web/ingredients.md).
