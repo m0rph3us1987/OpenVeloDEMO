@@ -10,6 +10,7 @@ OpenVelo is a meal-planning application composed of an Express API, a React web 
 
 * [Monorepo Layout](/architecture/monorepo.md) - Workspaces, root scripts, and cross-workspace dependencies.
 * [API Server](/architecture/api-server.md) - Express bootstrap, middleware order, and environment variables.
+* [Database Bootstrap](/architecture/db-bootstrap.md) - Idempotent script that creates the SQLite database, applies the Prisma schema, and seeds demo ingredients on every API startup.
 * [Web Application](/architecture/web-app.md) - React bootstrap, routing, state management, and styling tokens.
 
 # API

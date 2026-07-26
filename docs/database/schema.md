@@ -3,12 +3,12 @@ type: Database
 title: Prisma Schema
 description: Core data model for OpenVelo — ingredients, recipes, meal plans, cook logs, and shopping cart snapshots.
 tags: [database, prisma, schema]
-timestamp: 2026-07-26T12:57:49Z
+timestamp: 2026-07-26T13:54:15Z
 ---
 
 # Overview
 
-Source of truth: `apps/api/prisma/schema.prisma`. The data layer is SQLite via Prisma with `DATABASE_URL` from the environment.
+Source of truth: `apps/api/prisma/schema.prisma`. The data layer is SQLite via Prisma with `DATABASE_URL` from the environment. The database file is created and seeded automatically by the bootstrap script — see [Database Bootstrap](/architecture/db-bootstrap.md). The schema is applied via `prisma db push` on first run; an idempotent `INSERT OR IGNORE` seed in `apps/api/prisma/seed.sql` populates seven demo ingredients (`Beef`, `Tomato`, `Milk`, `Rice`, `Salt`, `Pepper`, `Olive Oil`).
 
 # Models
 
@@ -100,10 +100,13 @@ Ingredient ──< RecipeIngredient >── Recipe
 
 The migration at `apps/api/prisma/migrations/20260726124114_ingredient_name_unique/migration.sql` creates the current SQLite tables, relationship indexes, and the unique `Ingredient.name` index used by the [Ingredients API](/api/ingredients.md) to return `409 NAME_CONFLICT` for duplicates.
 
+In addition to the migration history, the API server runs `prisma db push` on first startup (via the [Database Bootstrap](/architecture/db-bootstrap.md) script) so a fresh environment does not need a manual `prisma migrate` step before the API can start.
+
 | Script | Purpose |
 |--------|---------|
 | `npm run prisma:generate -w @openvelo/api` | Regenerate the Prisma client. |
 | `npm run prisma:migrate -w @openvelo/api` | Create and apply a migration named `init` (or next pending name). |
+| `node scripts/ensure-db.mjs` (from `apps/api`) | Idempotent DB bootstrap — used by `setup.sh` and the API server. |
 
 # Citations
 
