@@ -4,9 +4,9 @@ import { RouterErrorElement } from '@/components/RouterErrorElement';
 import {
   Dashboard,
   Recipes,
-  Ingredients,
   ShoppingCart,
 } from '@/pages/PlaceholderPages';
+import { Ingredients } from '@/pages/Ingredients';
 import { NotFound } from '@/pages/NotFound';
 
 const router = createBrowserRouter([
