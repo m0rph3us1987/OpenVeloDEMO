@@ -293,9 +293,26 @@ export function createRecipesRouter(prisma: PrismaClient): Router {
           .json({ error: 'Recipe not found', code: 'NOT_FOUND' } satisfies RecipeError);
         return;
       }
-      await prisma.recipe.delete({ where: { id } });
+      await prisma.$transaction(async (tx) => {
+        await tx.mealPlanSlot.deleteMany({ where: { recipeId: id } });
+        await tx.cookLog.deleteMany({ where: { recipeId: id } });
+        await tx.cartSnapshot.updateMany({
+          where: { recipeId: id },
+          data: { recipeId: null },
+        });
+        await tx.recipe.delete({ where: { id } });
+      });
       res.status(204).end();
     } catch (err) {
+      if (isPrismaKnownError(err) && err.code === 'P2003') {
+        res
+          .status(409)
+          .json({
+            error: 'Recipe cannot be deleted because it is referenced by other records',
+            code: 'REFERENCED_BY_OTHER_RECORD',
+          } satisfies RecipeError);
+        return;
+      }
       next(err);
     }
   });
