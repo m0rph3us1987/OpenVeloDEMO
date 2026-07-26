@@ -15,7 +15,3 @@ export function Dashboard(): JSX.Element {
     </div>
   );
 }
-
-export function ShoppingCart(): JSX.Element {
-  return <h2 className="text-2xl font-semibold">Shopping Cart</h2>;
-}
