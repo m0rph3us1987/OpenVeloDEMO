@@ -2,17 +2,24 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from '../src/components/Layout';
+import { RouterErrorElement } from '../src/components/RouterErrorElement';
 import { useThemeStore } from '../src/store/theme';
+import { NotFound } from '../src/pages/NotFound';
 
 function renderLayout(initialPath: string): void {
   render(
     <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        <Route
+          path="/"
+          element={<Layout />}
+          errorElement={<RouterErrorElement />}
+        >
           <Route index element={<div>dashboard-page</div>} />
           <Route path="recipes" element={<div>recipes-page</div>} />
           <Route path="ingredients" element={<div>ingredients-page</div>} />
           <Route path="shopping-cart" element={<div>cart-page</div>} />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -49,5 +56,24 @@ describe('Layout sidebar', () => {
     const toggle = screen.getByRole('button', { name: 'Toggle theme' });
     expect(toggle.className).toContain('focus-visible:ring-2');
     expect(toggle.className).toContain('focus-visible:ring-ring');
+  });
+
+  it('keeps the sidebar visible and renders NotFound for unknown routes', () => {
+    renderLayout('/unknown-route');
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Recipes' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ingredients' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Shopping Cart' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Page not found' })).toBeTruthy();
+  });
+
+  it('keeps the sidebar visible and renders NotFound for nested unmatched paths like /recipes/new', () => {
+    renderLayout('/recipes/new');
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Recipes' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ingredients' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Shopping Cart' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Page not found' })).toBeTruthy();
   });
 });
