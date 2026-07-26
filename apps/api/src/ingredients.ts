@@ -177,9 +177,21 @@ export function createIngredientsRouter(prisma: PrismaClient): Router {
           .json({ error: 'Ingredient not found', code: 'NOT_FOUND' } satisfies IngredientError);
         return;
       }
-      await prisma.ingredient.delete({ where: { id } });
+      await prisma.$transaction(async (tx) => {
+        await tx.recipeIngredient.deleteMany({ where: { ingredientId: id } });
+        await tx.cookLog.deleteMany({ where: { ingredientId: id } });
+        await tx.cartItem.deleteMany({ where: { ingredientId: id } });
+        await tx.ingredient.delete({ where: { id } });
+      });
       res.status(204).end();
     } catch (err) {
+      if (isPrismaKnownError(err) && err.code === 'P2003') {
+        res.status(409).json({
+          error: 'Ingredient is referenced by other records',
+          code: 'REFERENCED_BY_OTHER_RECORD',
+        } satisfies IngredientError);
+        return;
+      }
       next(err);
     }
   });
