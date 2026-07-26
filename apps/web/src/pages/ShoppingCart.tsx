@@ -264,13 +264,19 @@ function AddManualForm(props: AddFormProps): JSX.Element {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    const qty = Number(quantity);
-    if (!selectedId || !selected) {
-      setValidation('Pick an ingredient');
+    setValidation(null);
+    const trimmedQty = quantity.trim();
+    if (trimmedQty === '') {
+      setValidation('Quantity is required');
       return;
     }
+    const qty = Number(trimmedQty);
     if (!Number.isFinite(qty) || qty <= 0) {
       setValidation('Quantity must be greater than 0');
+      return;
+    }
+    if (!selectedId || !selected) {
+      setValidation('Pick an ingredient');
       return;
     }
     const allowed = displayUnitsForBase(selected.baseUnit);
@@ -335,7 +341,8 @@ function AddManualForm(props: AddFormProps): JSX.Element {
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               'border-muted',
             )}
-            required
+            aria-required="true"
+            aria-invalid={Boolean(validation && validation.toLowerCase().includes('quantity'))}
           />
         </div>
         <div>
