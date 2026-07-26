@@ -3,7 +3,7 @@ type: Component
 title: Layout Component
 description: Top-level shell that renders a responsive persistent sidebar, sidebar navigation, theme toggle, and the active route's content.
 tags: [web, layout, navigation, a11y]
-timestamp: 2026-07-26T12:28:00Z
+timestamp: 2026-07-26T19:12:38Z
 ---
 
 # Source
@@ -63,6 +63,7 @@ Defined in the `NAV_ITEMS` constant at the top of the file:
 | Recipes | `/recipes` | `false` |
 | Ingredients | `/ingredients` | `false` |
 | Shopping Cart | `/shopping-cart` | `false` |
+| Settings | `/settings` | `false` |
 
 Each item is rendered as a React Router `NavLink`. The `end` flag is forwarded so that the Dashboard only highlights on an exact `/` match, while the other items highlight on their prefix.
 

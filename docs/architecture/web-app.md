@@ -3,7 +3,7 @@ type: Architecture
 title: Web Application
 description: React SPA structure, routing, state management, and styling.
 tags: [web, react, vite, spa]
-timestamp: 2026-07-26T12:57:49Z
+timestamp: 2026-07-26T19:12:38Z
 ---
 
 # Overview
@@ -28,6 +28,7 @@ Routing is configured in `apps/web/src/App.tsx` using `react-router-dom` and a s
 | `/recipes` | `Recipes` | Placeholder page. |
 | `/ingredients` | `Ingredients` | Data-backed ingredient list with filters and CRUD dialogs. See [Ingredients Page](/web/ingredients.md). |
 | `/shopping-cart` | `ShoppingCart` | Placeholder page. |
+| `/settings` | `Settings` | Workspace information and the destructive data reset action. See [Settings Page](/web/settings.md). |
 | `*` | `NotFound` | Wildcard; matches any unmatched path (including nested ones like `/recipes/new`). See [NotFound Page](/web/not-found.md). |
 
 All routes are children of the `Layout` component, which renders the sidebar and an `<Outlet />`. The root layout also sets `errorElement: <RouterErrorElement />` so thrown errors (including 404 responses) are caught and rendered inside the same persistent shell. See [RouterErrorElement](/web/router-error-element.md).
@@ -56,6 +57,7 @@ The shell uses a persistent two-column flex layout: a responsive sidebar (always
 | `apps/web/src/components/RouterErrorElement.tsx` | Root route error boundary; handles thrown 404/500 responses and unexpected errors. See [RouterErrorElement](/web/router-error-element.md). |
 | `apps/web/src/pages/PlaceholderPages.tsx` | Placeholder content for Dashboard, Recipes, and Shopping Cart. |
 | `apps/web/src/pages/Ingredients.tsx` | Ingredient list, filters, forms, dialogs, and [API](/api/ingredients.md) integration. |
+| `apps/web/src/pages/Settings.tsx` | Settings page with the destructive `Clear all data` action. See [Settings Page](/web/settings.md). |
 | `apps/web/src/pages/NotFound.tsx` | Unmatched-route fallback (wildcard `*` child). See [NotFound Page](/web/not-found.md). |
 | `apps/web/src/components/ui/button.tsx` | Shared button primitive (CVA variants) with focus-ring base. |
 | `apps/web/src/index.css` | CSS custom properties (background, foreground, muted, accent, ring) for light + dark. |
@@ -73,6 +75,7 @@ The shell uses a persistent two-column flex layout: a responsive sidebar (always
 2. The active route receives the `bg-accent text-background` classes while siblings do not.
 3. Nav links and the theme toggle both carry the `focus-visible:ring-2` and `focus-visible:ring-ring` classes.
 4. Unknown routes (e.g. `/unknown-route`, `/recipes/new`) keep the sidebar visible and render the [NotFound Page](/web/not-found.md).
+5. The [Settings Page](/web/settings.md) renders the workspace info card and the destructive `Clear all data` action, and invalidates every relevant query on a successful reset.
 
 # Adding a New Page
 
