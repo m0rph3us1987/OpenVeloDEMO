@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { to: '/recipes', label: 'Recipes', end: false },
   { to: '/ingredients', label: 'Ingredients', end: false },
   { to: '/shopping-cart', label: 'Shopping Cart', end: false },
+  { to: '/settings', label: 'Settings', end: false },
 ];
 
 const navLinkClassName = (isActive: boolean): string =>
