@@ -3,7 +3,7 @@ type: Architecture
 title: Web Application
 description: React SPA structure, routing, state management, and styling.
 tags: [web, react, vite, spa]
-timestamp: 2026-07-26T11:53:07Z
+timestamp: 2026-07-26T12:57:49Z
 ---
 
 # Overview
@@ -26,7 +26,7 @@ Routing is configured in `apps/web/src/App.tsx` using `react-router-dom` and a s
 |------|-----------|-------|
 | `/` | `Dashboard` | Index route, default landing page. |
 | `/recipes` | `Recipes` | Placeholder page. |
-| `/ingredients` | `Ingredients` | Placeholder page. |
+| `/ingredients` | `Ingredients` | Data-backed ingredient list with filters and CRUD dialogs. See [Ingredients Page](/web/ingredients.md). |
 | `/shopping-cart` | `ShoppingCart` | Placeholder page. |
 | `*` | `NotFound` | Wildcard; matches any unmatched path (including nested ones like `/recipes/new`). See [NotFound Page](/web/not-found.md). |
 
@@ -37,6 +37,10 @@ All routes are children of the `Layout` component, which renders the sidebar and
 | Store | File | Purpose |
 |-------|------|---------|
 | `useThemeStore` | `apps/web/src/store/theme.ts` | Light/dark theme with `localStorage` persistence and `prefers-color-scheme` fallback. See [Theme Store](/web/theme-store.md). |
+
+# Data Fetching
+
+The [Ingredients Page](/web/ingredients.md) uses TanStack Query with the `['ingredients']` query key. Browser requests target relative `/api/ingredients` URLs; the Vite development server proxies `/api` to `http://localhost:3001`. Successful create, update, and delete mutations invalidate the query and refresh the list.
 
 # Layout & Styling
 
@@ -50,13 +54,16 @@ The shell uses a persistent two-column flex layout: a responsive sidebar (always
 | `apps/web/src/App.tsx` | Router and route table. |
 | `apps/web/src/components/Layout.tsx` | Persistent responsive sidebar, nav links, theme toggle, content outlet. |
 | `apps/web/src/components/RouterErrorElement.tsx` | Root route error boundary; handles thrown 404/500 responses and unexpected errors. See [RouterErrorElement](/web/router-error-element.md). |
-| `apps/web/src/pages/PlaceholderPages.tsx` | Initial placeholder content for each route. |
+| `apps/web/src/pages/PlaceholderPages.tsx` | Placeholder content for Dashboard, Recipes, and Shopping Cart. |
+| `apps/web/src/pages/Ingredients.tsx` | Ingredient list, filters, forms, dialogs, and [API](/api/ingredients.md) integration. |
 | `apps/web/src/pages/NotFound.tsx` | Unmatched-route fallback (wildcard `*` child). See [NotFound Page](/web/not-found.md). |
 | `apps/web/src/components/ui/button.tsx` | Shared button primitive (CVA variants) with focus-ring base. |
 | `apps/web/src/index.css` | CSS custom properties (background, foreground, muted, accent, ring) for light + dark. |
 | `apps/web/tailwind.config.ts` | Tailwind theme tokens (background, foreground, muted, accent, ring). |
 | `apps/web/src/lib/utils.ts` | `cn()` helper for conditional Tailwind classes. |
 | `apps/web/tests/layout.test.tsx` | Vitest + Testing Library tests for the sidebar. |
+| `apps/web/tests/ingredients.test.tsx` | UI tests for ingredient filtering and CRUD workflows. |
+| `apps/web/vite.config.ts` | Vite setup, test environment, aliases, and `/api` proxy to the API server. |
 
 # Tests
 
