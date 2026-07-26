@@ -274,6 +274,40 @@ describe('Recipes page', () => {
     expect(screen.getByText('Salt Water')).toBeInTheDocument();
   });
 
+  it('surfaces a 409 REFERENCED_BY_OTHER_RECORD inline when the API refuses deletion', async () => {
+    const realFetch = makeFetch();
+    let failureCount = 0;
+    const fetchOverride: typeof fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = (init?.method ?? 'GET').toUpperCase();
+      const match = url.match(/\/api\/recipes\/(.+)$/);
+      if (match && method === 'DELETE') {
+        failureCount += 1;
+        return new Response(
+          JSON.stringify({
+            error: 'Recipe cannot be deleted because it is referenced by other records',
+            code: 'REFERENCED_BY_OTHER_RECORD',
+          }),
+          { status: 409 },
+        );
+      }
+      return realFetch(input, init);
+    }) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchOverride);
+
+    setup();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Delete Salt Water' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm delete Salt Water' }));
+    expect(
+      await screen.findByText(
+        'Recipe cannot be deleted because it is referenced by other records (REFERENCED_BY_OTHER_RECORD)',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Salt Water')).toBeInTheDocument();
+    expect(failureCount).toBe(1);
+  });
+
   it('displays quantity with up to two decimals and trims trailing zeros', async () => {
     setup();
     expect(await screen.findByText('Salt Water')).toBeInTheDocument();

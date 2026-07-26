@@ -300,6 +300,7 @@ export function createRecipesRouter(prisma: PrismaClient): Router {
           where: { recipeId: id },
           data: { recipeId: null },
         });
+        await tx.recipeIngredient.deleteMany({ where: { recipeId: id } });
         await tx.recipe.delete({ where: { id } });
       });
       res.status(204).end();
