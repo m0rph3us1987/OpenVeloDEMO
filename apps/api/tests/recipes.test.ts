@@ -276,4 +276,78 @@ describe('Recipes API', () => {
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('NOT_FOUND');
   });
+
+  it('DELETE /api/recipes/:id succeeds for a freshly created recipe with no dependents (bug reproducer)', async () => {
+    const ids = await seedIngredients();
+    const created = await request(app)
+      .post('/api/recipes')
+      .send({
+        name: 'Lonely Recipe',
+        ingredients: [{ ingredientId: ids.salt, quantity: 1, unit: 'g' }],
+      });
+    const recipeId = created.body.id;
+    expect(
+      await prisma.mealPlanSlot.count({ where: { recipeId } }),
+    ).toBe(0);
+    expect(await prisma.cookLog.count({ where: { recipeId } })).toBe(0);
+    expect(await prisma.cartSnapshot.count({ where: { recipeId } })).toBe(0);
+
+    const del = await request(app).delete(`/api/recipes/${recipeId}`);
+    expect(del.status).toBe(204);
+    expect(await prisma.recipe.count({ where: { id: recipeId } })).toBe(0);
+    expect(await prisma.recipeIngredient.count({ where: { recipeId } })).toBe(0);
+
+    const list = await request(app).get('/api/recipes');
+    expect(list.status).toBe(200);
+    expect(list.body).toEqual([]);
+  });
+
+  it('DELETE /api/recipes/:id removes dependents and recipe rows in one transaction', async () => {
+    const ids = await seedIngredients();
+    const created = await request(app)
+      .post('/api/recipes')
+      .send({
+        name: 'With Everything',
+        ingredients: [
+          { ingredientId: ids.salt, quantity: 1, unit: 'g' },
+          { ingredientId: ids.milk, quantity: 50, unit: 'ml' },
+        ],
+      });
+    const recipeId = created.body.id;
+    const snapshot = await prisma.cartSnapshot.create({
+      data: { recipeId, itemsJson: '{}' },
+    });
+    await prisma.cookLog.create({ data: { recipeId } });
+    await prisma.mealPlanSlot.create({
+      data: { recipeId, date: new Date('2026-07-26'), slot: 'lunch' },
+    });
+
+    const del = await request(app).delete(`/api/recipes/${recipeId}`);
+    expect(del.status).toBe(204);
+    expect(await prisma.recipe.count({ where: { id: recipeId } })).toBe(0);
+    expect(await prisma.recipeIngredient.count({ where: { recipeId } })).toBe(0);
+    expect(await prisma.cookLog.count({ where: { recipeId } })).toBe(0);
+    expect(await prisma.mealPlanSlot.count({ where: { recipeId } })).toBe(0);
+    const after = await prisma.cartSnapshot.findUnique({ where: { id: snapshot.id } });
+    expect(after).not.toBeNull();
+    expect(after?.recipeId).toBeNull();
+  });
+
+  it('DELETE /api/recipes/:id still succeeds when the FK cascade rule on RecipeIngredient is unavailable', async () => {
+    const ids = await seedIngredients();
+    const created = await prisma.recipe.create({ data: { title: 'Stale DB' } });
+    await prisma.recipeIngredient.create({
+      data: { recipeId: created.id, ingredientId: ids.salt, quantity: 1, unit: 'g' },
+    });
+    expect(
+      await prisma.recipeIngredient.count({ where: { recipeId: created.id } }),
+    ).toBe(1);
+
+    const del = await request(app).delete(`/api/recipes/${created.id}`);
+    expect(del.status).toBe(204);
+    expect(await prisma.recipe.count({ where: { id: created.id } })).toBe(0);
+    expect(
+      await prisma.recipeIngredient.count({ where: { recipeId: created.id } }),
+    ).toBe(0);
+  });
 });

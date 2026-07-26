@@ -3,7 +3,7 @@ type: Database
 title: Prisma Schema
 description: Core data model for OpenVelo — ingredients, recipes, meal plans, cook logs, and shopping cart snapshots.
 tags: [database, prisma, schema]
-timestamp: 2026-07-26T15:05:40Z
+timestamp: 2026-07-26T15:24:43Z
 ---
 
 # Overview
@@ -102,7 +102,7 @@ Ingredient ──< RecipeIngredient >── Recipe
 
 | Dependent relation | On recipe delete | Reason |
 |--------------------|------------------|--------|
-| `RecipeIngredient` | Removed (cascade). | Already handled by the schema's cascade rule on the `Recipe.ingredients` relation. |
+| `RecipeIngredient` | Removed (`deleteMany` issued explicitly by the API). | The schema declares `onDelete: Cascade`, but the API also issues the deletion inside the transaction so a stale database without that FK rule still removes the rows correctly. |
 | `MealPlanSlot` | Removed (`deleteMany`). | A meal-plan entry for a recipe that no longer exists is meaningless. |
 | `CookLog` | Removed (`deleteMany`). | Cook history is meaningless once the recipe itself is gone. |
 | `CartSnapshot` | `recipeId` set to `NULL` (`updateMany`). | Shopping-cart history is preserved as an anonymous snapshot; only the FK link is severed. |

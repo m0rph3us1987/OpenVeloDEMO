@@ -92,8 +92,10 @@ async function deleteRecipe(id: string): Promise<void> {
 
 async function extractError(res: Response): Promise<string> {
   try {
-    const data = (await res.json()) as { error?: string };
-    if (data?.error) return data.error;
+    const data = (await res.json()) as { error?: string; code?: string };
+    if (data?.error) {
+      return data.code ? `${data.error} (${data.code})` : data.error;
+    }
   } catch {
     // ignore
   }
