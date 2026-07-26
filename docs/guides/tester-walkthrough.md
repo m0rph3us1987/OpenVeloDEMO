@@ -3,7 +3,7 @@ type: Guide
 title: Tester Walkthrough
 description: Navigation steps and expected UI behaviors for each route in the OpenVelo web app.
 tags: [guide, tester, ui]
-timestamp: 2026-07-26T15:23:53Z
+timestamp: 2026-07-26T16:48:00Z
 ---
 
 # Prerequisites
@@ -43,7 +43,7 @@ If the viewport is short, the sidebar scrolls internally (`overflow-y-auto`) ins
 - A seven-column `Weekly plan` grid (Monday → Sunday). Today's column is highlighted with `border-accent ring-2 ring-ring` when viewing the current ISO week.
 - Each column has a `+ Add` button. Each planned meal shows the meal-slot label, the recipe name, optional notes, an `I cooked this` button, and a red `X` delete button.
 - Below the grid, a `Planned slots` table (Day / Slot / Recipe / Notes) mirrors the planned slots. Click an underlined recipe name to open the pre-filled `Edit planned meal` dialog; changing a field and clicking `Save` updates the slot and closes the dialog.
-- At the bottom, a `Total times cooked per recipe` table (Recipe / Times cooked / Last cooked) summarises cook logs for the active week.
+- At the bottom, a `Total times cooked per recipe` table (Recipe / Times cooked / Last cooked) summarises lifetime cook logs across every recipe. Never-cooked recipes appear with `0` and an empty `Last cooked` cell.
 
 See [Dashboard Page](/web/dashboard.md) for the full add/edit/delete/cook interaction steps.
 

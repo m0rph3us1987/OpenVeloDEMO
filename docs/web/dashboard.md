@@ -3,7 +3,7 @@ type: Web
 title: Dashboard Page
 description: Weekly meal-planner UI rendered at `/`, including the seven-day grid, add/edit/delete dialogs, cook tracking, and per-recipe cooking summary.
 tags: [web, dashboard, plan, react, tanstack-query]
-timestamp: 2026-07-26T15:59:39Z
+timestamp: 2026-07-26T16:48:00Z
 ---
 
 # Overview
@@ -27,7 +27,7 @@ The page talks to the [Plan API](/api/plan.md) and the [Recipes API](/api/recipe
 4. The column that matches today's date when viewing the current week is highlighted with `border-accent ring-2 ring-ring`.
 5. Each planned meal appears as a card with the meal-slot label (`Breakfast`, `Lunch`, `Dinner`, `Snack`), the recipe name, optional notes, an `I cooked this` button, and an `X` delete button.
 6. Below the grid, a `Planned slots` table mirrors the planned slots for the week (Day, Slot, Recipe, Notes). The recipe name is rendered as an underlined button that opens the edit dialog.
-7. At the bottom, a `Total times cooked per recipe` table lists every recipe that has at least one cook log in the active week with `Recipe`, `Times cooked`, and `Last cooked` columns.
+7. At the bottom, a `Total times cooked per recipe` table lists every recipe with `Recipe`, `Times cooked`, and `Last cooked` columns. Recipes that have never been cooked appear with `Times cooked = 0` and an empty `Last cooked` value. The data is sourced from the global `GET /api/stats` endpoint.
 
 ## Add a planned meal
 
@@ -56,9 +56,10 @@ The page talks to the [Plan API](/api/plan.md) and the [Recipes API](/api/recipe
 ## Mark a slot as cooked
 
 1. Click `I cooked this` on a planned meal card.
-2. The button label flips to `Cooked ✓`, the button becomes disabled, and the times-cooked counter increments.
-3. Each slot can only be marked cooked once per day — subsequent clicks are blocked locally and the banner shows `You already marked this slot as cooked today.`
-4. The call `POST /api/plan/:id/cooked` creates a `CookLog` row tied to the slot, which is reflected in the `Total times cooked per recipe` table.
+2. The button label flips to `Logging…` while the request is in flight, then returns to `I cooked this` once the response arrives.
+3. The call `POST /api/plan/:id/cooked` creates a fresh `CookLog` row tied to the slot. Each click records another cook — the action is intentionally repeatable, so the same slot may be marked cooked any number of times.
+4. On success, the dashboard refetches the plan, stats, and recipe overview so the slot counter, the `Total times cooked per recipe` row, and the recipe overview `timesCooked` field all update together. The `Last cooked` date advances to the new cook timestamp.
+5. On failure, the cached values stay untouched, the button re-enables, and the parsed API/network error message renders in the existing `role="status"` banner for the user to dismiss.
 
 ## Navigate between weeks
 
@@ -74,10 +75,10 @@ The page talks to the [Plan API](/api/plan.md) and the [Recipes API](/api/recipe
 | Week controls | `←`, `→`, `Today` | Navigate ISO weeks. |
 | `Weekly plan` grid | 7 columns (1 per day) | Today column highlighted with `border-accent ring-2 ring-ring`. |
 | `+ Add` button | per column | Opens `PlanSlotDialog` in add mode. |
-| `I cooked this` button | per slot | Becomes `Cooked ✓` after a successful cook. |
+| `I cooked this` button | per slot | Becomes `Logging…` while the request is in flight; safe to click again afterwards to log another cook. |
 | `X` button | per slot | Opens `ConfirmDeleteDialog`. |
 | `Planned slots` table | below the grid | Day / Slot / Recipe / Notes. Recipe is an edit trigger. |
-| `Total times cooked per recipe` table | bottom of the page | Recipe / Times cooked / Last cooked. |
+| `Total times cooked per recipe` table | bottom of the page | Recipe / Times cooked / Last cooked. Sourced from the global `GET /api/stats` and lists every recipe, including never-cooked rows with `0` and an em-dash placeholder for the date. |
 | `PlanSlotDialog` | `role="dialog"`, `aria-modal="true"` | Add or edit dialog. |
 | `ConfirmDeleteDialog` | `role="alertdialog"`, `aria-modal="true"` | Delete confirmation. |
 
@@ -88,7 +89,7 @@ apps/web/src/App.tsx (createBrowserRouter)
   └── index route → Dashboard
         └── apps/web/src/pages/Dashboard.tsx
               ├── useQuery(['plan', activeWeek]) → fetchPlan() → /api/plan?week=…
-              ├── useQuery(['plan-stats', activeWeek]) → fetchStats() → /api/plan/stats?week=…
+              ├── useQuery(['stats']) → fetchStats() → /api/stats
               ├── useQuery(['recipes']) → fetchRecipes() → /api/recipes
               ├── useMutation(deletePlanSlot) → DELETE /api/plan/:id
               ├── WeeklyPlan (apps/web/src/components/WeeklyPlan.tsx)
@@ -99,9 +100,9 @@ apps/web/src/App.tsx (createBrowserRouter)
 
 State transitions:
 
-- Add / edit / delete success: invalidates `['plan', activeWeek]` and `['plan-stats', activeWeek]`. When the active week equals the current week, it also invalidates `['cart', currentWeek]` so any cart UI refreshes from the auto cart aggregation.
-- Cook success: same invalidation plus a local `cookedTracker` Set so the button flips to `Cooked ✓` without a flash.
-- Cook error or duplicate cook: surfaces a banner via `setBanner()`.
+- Add / edit / delete success: invalidates `['plan', activeWeek]`, `['stats']`, and `['recipes']`. When the active week equals the current week, it also invalidates `['cart', currentWeek]` so any cart UI refreshes from the auto cart aggregation.
+- Cook success: same invalidations as add/edit/delete so the slot counter, summary, and recipe overview stay in sync. No local cache is mutated optimistically; the displayed counts and dates come from the fresh server data.
+- Cook error: leaves the cached values untouched and surfaces the API/network message in the existing `role="status"` banner via `setBanner()`.
 
 # Key Files
 
@@ -121,7 +122,7 @@ State transitions:
 2. Click + Add on Wednesday
 3. Pick slot "Dinner", recipe "Tomato Soup", notes "extra basil"
 4. Submit → the slot appears in the Wednesday column and in the Planned slots table
-5. Click "I cooked this" → label flips to "Cooked ✓", the per-recipe counter increments
+5. Click `I cooked this` → label flips to `Logging…` while the request is pending, then returns to `I cooked this`; the per-recipe counter increments
 6. Click the underlined "Tomato Soup" in the Planned slots table → the dialog opens pre-filled
 7. Change the slot to "Lunch" → Save → the card moves to the Lunch slot of the same day
 8. Click X on the slot → Confirm Delete → the row disappears
