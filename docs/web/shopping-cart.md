@@ -3,7 +3,7 @@ type: Guide
 title: Shopping Cart Page
 description: Tester workflow and technical wiring for weekly plan-derived and manually added shopping-cart items.
 tags: [web, cart, tester, shopping]
-timestamp: 2026-07-26T18:17:53Z
+timestamp: 2026-07-26T18:44:22Z
 ---
 
 # Purpose
@@ -53,7 +53,7 @@ Changing a current-week plan slot triggers the [Cart Recompute](/architecture/ca
 5. Click `Add to cart`.
 6. Confirm the row appears immediately under the ingredient's category with a `Manual` badge and the total includes the new amount.
 
-The form shows `Pick an ingredient` if no picker option is selected, `Quantity must be greater than 0` for an invalid amount, and `Unit must match the ingredient's allowed base units (...)` if a non-compatible unit is submitted. While saving, the button reads `Saving...`. API failures appear in a dismissible red banner and the optimistic change is rolled back.
+The form shows `Quantity is required` when the quantity input is empty (or contains only whitespace), `Quantity must be greater than 0` for non-numeric, zero, or negative amounts, `Pick an ingredient` if no picker option is selected, and `Unit must match the ingredient's allowed base units (...)` if a non-compatible unit is submitted. The quantity value is trimmed before numeric parsing, so leading/trailing whitespace does not break validation. Validation checks run in this order: required-quantity → numeric-quantity → ingredient-selected → unit-compatible. While saving, the button reads `Saving...`. API failures appear in a dismissible red banner and the optimistic change is rolled back.
 
 Adding the same ingredient and compatible unit again creates a new manual line that appears as a separate row beneath the previous one. Each manual line has its own quantity, unit, note, and `Delete` button; deleting one line never affects the others.
 
@@ -88,6 +88,10 @@ Past-week results are frozen by the [Shopping Cart API](/api/cart.md) and remain
 - Failed mutations show a red message banner with a `Dismiss` button.
 - All quantity inputs, selectors, and buttons use the shared keyboard focus ring.
 
+# Accessibility (Manual Line Form)
+
+The `Quantity` input in `Add manual line` is announced as required to assistive tech (`aria-required="true"`) instead of relying on the browser's native `required` attribute. When validation fails because of the quantity field, the input is also marked invalid (`aria-invalid="true"`), letting screen readers surface the error alongside the visible message. The form's existing `<label>` association and the live validation banner provide the linked error text.
+
 # Technical Wiring
 
 React Query caches carts under `['cart', weekKey]`, historical summaries under `['cart-weeks']`, and the ingredient picker data under `['ingredients']`. Create, update, and delete mutations optimistically update the current-week cache, roll back on failure, and invalidate it after settlement.
@@ -102,3 +106,4 @@ React Query caches carts under `['cart', weekKey]`, historical summaries under `
 | `apps/web/src/components/IngredientPicker.tsx` | Searchable ingredient selection used by the manual-line form. |
 | `apps/api/src/cart.ts` | Backing [Shopping Cart API](/api/cart.md). |
 | `apps/web/tests/shopping-cart.test.tsx` | UI coverage for grouping, metric display, past-week mode, optimistic errors, and mixed-source edits. |
+| `apps/web/tests/shopping-cart-validation.test.tsx` | UI coverage for manual-line form validation order, empty/whitespace/non-numeric/negative quantity handling, ingredient-required check, and unit compatibility errors. |
