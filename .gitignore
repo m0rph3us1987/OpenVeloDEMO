@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+coverage
+.env*
+data/*
+!data/.gitkeep
+.kilo/node_modules/
+dist/
+.npm/
+node_modules/
