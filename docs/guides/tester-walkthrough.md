@@ -3,7 +3,7 @@ type: Guide
 title: Tester Walkthrough
 description: Navigation steps and expected UI behaviors for each route in the OpenVelo web app.
 tags: [guide, tester, ui]
-timestamp: 2026-07-26T17:28:38Z
+timestamp: 2026-07-26T19:12:38Z
 ---
 
 # Prerequisites
@@ -27,7 +27,7 @@ The main content area uses `p-4` padding on small screens and `p-6` from the `md
 
 ## Sidebar Contents
 
-- **Left sidebar** — branded `OpenVelo` heading, four navigation links (`Dashboard`, `Recipes`, `Ingredients`, `Shopping Cart`), and a `Light mode` / `Dark mode` toggle button at the bottom.
+- **Left sidebar** — branded `OpenVelo` heading, five navigation links (`Dashboard`, `Recipes`, `Ingredients`, `Shopping Cart`, `Settings`), and a `Light mode` / `Dark mode` toggle button at the bottom.
 - **Right content area** — the active page renders inside an `<Outlet />` and scrolls independently of the sidebar.
 
 If the viewport is short, the sidebar scrolls internally (`overflow-y-auto`) instead of clipping the toggle button off-screen.
@@ -108,7 +108,7 @@ The highlight must always match the URL after browser history navigation; it mus
 - Each nav link and the theme toggle button shows a 2px blue ring (`ring-ring`) with a 2px gap to the underlying surface (`ring-offset-background`) when focused via keyboard.
 - The ring color is blue in both light and dark themes; only the hue shifts.
 - Clicking an element with the mouse does **not** show the ring (`focus-visible` is keyboard-only).
-- Focus order: `Dashboard` → `Recipes` → `Ingredients` → `Shopping Cart` → theme toggle.
+- Focus order: `Dashboard` → `Recipes` → `Ingredients` → `Shopping Cart` → `Settings` → theme toggle.
 
 See [Focus Ring Design Token](/web/focus-ring.md) for the underlying token.
 
@@ -150,3 +150,25 @@ See [Health Endpoint](/api/health.md) and [Ingredients API](/api/ingredients.md)
 - Clicking `Back to Dashboard` (or any sidebar link) returns to a normal page.
 
 See [NotFound Page](/web/not-found.md) for the underlying component and [RouterErrorElement](/web/router-error-element.md) for the sibling error boundary that handles thrown 404 responses from loaders.
+
+# Route: Settings (`/settings`)
+
+**How to reach it:** Click `Settings` in the sidebar.
+
+**Expected behavior:**
+- Heading: `Settings`, with subtitle `Application information and data management.`
+- An `About OpenVelo` card describing the product and showing `Version 0.1.0`.
+- A `Data` card with explanatory copy and a `Clear all data` button (`Button` with `aria-haspopup="dialog"`).
+- Clicking `Clear all data` opens a confirmation modal titled `Clear all data?` with the body `This will erase all recipes, ingredients, planned meals, cook history, and shopping cart, and re-seed the demo data.`
+- The modal contains `Cancel` and `Clear all data` buttons. While the request is pending the primary button label becomes `Clearing…` and both buttons are disabled; pressing `Escape` is also ignored while pending.
+- On success the modal closes, the success message `All data cleared and reseeded with the demo set.` appears in green, and the message auto-clears after 3 seconds. Every cached page (`Ingredients`, `Recipes`, `Dashboard`, `Shopping Cart`) re-reads its data on the next visit.
+- On failure the modal stays open and the error message is rendered in red under the body text. Cancel and retry, or fix the underlying issue and click `Clear all data` again.
+
+**API sanity check:**
+
+```bash
+curl -X POST http://localhost:3001/api/admin/reset
+# Expected: {"ok":true,"reseeded":true,"ingredients":13,"recipes":4}
+```
+
+Follow the complete interaction steps in [Settings Page](/web/settings.md) and the destructive handler in [Admin API](/api/admin.md).

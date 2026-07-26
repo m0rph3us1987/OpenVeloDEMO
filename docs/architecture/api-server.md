@@ -3,7 +3,7 @@ type: Architecture
 title: API Server
 description: Express server wiring, middleware order, and bootstrap entry points.
 tags: [api, express, server]
-timestamp: 2026-07-26T17:28:38Z
+timestamp: 2026-07-26T19:12:38Z
 ---
 
 # Entry Point
@@ -22,6 +22,7 @@ The API is bootstrapped from `apps/api/src/server.ts`. On startup it calls `boot
 6. **Plan router** — `/api/plan` delegates to `createPlanRouter()`. See [Plan API](/api/plan.md).
 7. **Stats router** — `/api/stats` delegates to `createStatsRouter()`. See [Plan API](/api/plan.md).
 8. **Cart router** — `/api/cart` delegates to `createCartRouter()`. See [Shopping Cart API](/api/cart.md).
+9. **Admin router** — `/api/admin` delegates to `createAdminRouter()`. Exposes the destructive `POST /api/admin/reset` endpoint. See [Admin API](/api/admin.md).
 
 # Environment Variables
 
@@ -46,6 +47,8 @@ The API is bootstrapped from `apps/api/src/server.ts`. On startup it calls `boot
 | `apps/api/src/cart-recompute.ts` | Shared base-unit normalization and auto cart aggregation. See [Cart Recompute](/architecture/cart-recompute.md). |
 | `apps/api/src/cart-snapshot.ts` | Builds live carts and freezes or lists historical weeks. See [Shopping Cart API](/api/cart.md). |
 | `apps/api/src/cart.ts` | Implements cart reads and current-week manual-line CRUD. See [Shopping Cart API](/api/cart.md). |
+| `apps/api/src/admin.ts` | Implements the destructive `POST /reset` handler that clears every user-managed table and re-seeds the demo set. See [Admin API](/api/admin.md). |
+| `apps/api/src/seed.ts` | Idempotent seed invoked by the admin reset and by the startup auto-seed. See [Seed Data](/architecture/seed-data.md). |
 | `apps/api/prisma/schema.prisma` | Data model (see [Database Schema](/database/schema.md)). |
 | `apps/api/tests/health.test.ts` | Supertest check for `/api/health`. |
 | `apps/api/tests/ingredients.test.ts` | Supertest coverage for ingredient CRUD and errors. |
@@ -67,7 +70,8 @@ Client (apps/web)
                       ├── /api/recipes ──► Prisma ──► SQLite
                       ├── /api/plan ──► Prisma ──► SQLite
                       │       └── recomputeAutoCartForWeek (CartItem)
-                      └── /api/cart ──► live aggregation + CartItem + CartHistory
+                       └── /api/cart ──► live aggregation + CartItem + CartHistory
+                       └── /api/admin ──► destructive reset + reseed
 ```
 
 Before the HTTP server starts, `apps/api/src/server.ts` calls `bootstrap()` from `apps/api/scripts/ensure-db.mjs` so the SQLite file exists, has the current schema, and contains the demo seed. See [Database Bootstrap](/architecture/db-bootstrap.md).

@@ -5,6 +5,7 @@ import { ShoppingCart } from '@/pages/ShoppingCart';
 import { Dashboard } from '@/pages/Dashboard';
 import { Recipes } from '@/pages/Recipes';
 import { Ingredients } from '@/pages/Ingredients';
+import { Settings } from '@/pages/Settings';
 import { NotFound } from '@/pages/NotFound';
 
 const router = createBrowserRouter([
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
       { path: 'recipes', element: <Recipes /> },
       { path: 'ingredients', element: <Ingredients /> },
       { path: 'shopping-cart', element: <ShoppingCart /> },
+      { path: 'settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },
     ],
   },
