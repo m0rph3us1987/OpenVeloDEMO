@@ -41,15 +41,15 @@ Source of truth: `apps/api/prisma/schema.prisma`. The data layer is SQLite via P
 
 ## RecipeIngredient
 
-Join table linking [Recipe](#recipe) to [Ingredient](#ingredient).
+Join table linking [Recipe](#recipe) to [Ingredient](#ingredient). Recipe ingredient units are constrained to `g`, `ml`, or `pcs` by API validation and by the database `CHECK`/bootstrap trigger.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `String` (cuid) | Primary key. |
-| `recipeId` | `String` | FK → `Recipe.id` (indexed). |
+| `recipeId` | `String` | FK → `Recipe.id` (indexed); cascade-deleted with its recipe. |
 | `ingredientId` | `String` | FK → `Ingredient.id` (indexed). |
-| `quantity` | `Float` | Numeric amount. |
-| `unit` | `String` | Display unit (free-form, e.g. `g`, `cup`). |
+| `quantity` | `Float` | Positive numeric amount when written through the recipes API. |
+| `unit` | `String` | One of `g`, `ml`, or `pcs`; enforced at the API and database layers. |
 
 ## MealPlanSlot
 
@@ -98,7 +98,7 @@ Ingredient ──< RecipeIngredient >── Recipe
 
 # Migrations
 
-The migration at `apps/api/prisma/migrations/20260726124114_ingredient_name_unique/migration.sql` creates the current SQLite tables, relationship indexes, and the unique `Ingredient.name` index used by the [Ingredients API](/api/ingredients.md) to return `409 NAME_CONFLICT` for duplicates.
+The migration at `apps/api/prisma/migrations/20260726124114_ingredient_name_unique/migration.sql` creates the current SQLite tables, relationship indexes, the unique `Ingredient.name` index used by the [Ingredients API](/api/ingredients.md), and the `RecipeIngredient.unit` check constraint. `apps/api/prisma/constraints.sql` and `apps/api/scripts/ensure-db.mjs` install the idempotent unit-enforcement trigger during database bootstrap.
 
 In addition to the migration history, the API server runs `prisma db push` on first startup (via the [Database Bootstrap](/architecture/db-bootstrap.md) script) so a fresh environment does not need a manual `prisma migrate` step before the API can start.
 
