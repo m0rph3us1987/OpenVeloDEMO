@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { createIngredientsRouter } from './ingredients.js';
 import { createRecipesRouter } from './recipes.js';
 import { createPlanRouter, createStatsRouter } from './plan.js';
+import { createCartRouter } from './cart.js';
 
 export function createApp(prisma?: PrismaClient): Express {
   const app = express();
@@ -26,6 +27,7 @@ export function createApp(prisma?: PrismaClient): Express {
   app.use('/api/recipes', createRecipesRouter((client as PrismaClient)));
   app.use('/api/plan', createPlanRouter((client as PrismaClient)));
   app.use('/api/stats', createStatsRouter((client as PrismaClient)));
+  app.use('/api/cart', createCartRouter((client as PrismaClient)));
 
   return app;
 }

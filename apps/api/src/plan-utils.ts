@@ -42,6 +42,22 @@ export function isoWeekFromDateUtc(date: Date): { year: number; week: number } {
   return { year: target.getUTCFullYear(), week: weekNumber };
 }
 
+/**
+ * Compute the ISO week number for the given date using its **local**
+ * (server-timezone) date components. Returns `{ year, week }`.
+ * Implements the algorithm from ISO 8601-1:2019 against local fields.
+ */
+export function isoWeekFromDateLocal(date: Date): { year: number; week: number } {
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayNumber = target.getDay() === 0 ? 7 : target.getDay();
+  target.setDate(target.getDate() + 4 - dayNumber);
+  const yearStart = new Date(target.getFullYear(), 0, 1);
+  const weekNumber = Math.ceil(
+    ((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
+  );
+  return { year: target.getFullYear(), week: weekNumber };
+}
+
 export function formatIsoWeek(year: number, week: number): string {
   return `${year}-W${String(week).padStart(2, '0')}`;
 }

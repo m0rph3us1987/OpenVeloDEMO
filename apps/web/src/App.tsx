@@ -1,7 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { RouterErrorElement } from '@/components/RouterErrorElement';
-import { ShoppingCart } from '@/pages/PlaceholderPages';
+import { ShoppingCart } from '@/pages/ShoppingCart';
 import { Dashboard } from '@/pages/Dashboard';
 import { Recipes } from '@/pages/Recipes';
 import { Ingredients } from '@/pages/Ingredients';

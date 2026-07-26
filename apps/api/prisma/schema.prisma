@@ -16,6 +16,7 @@ model Ingredient {
   updatedAt        DateTime            @updatedAt
   recipeIngredients RecipeIngredient[]
   cookLogs         CookLog[]
+  cartItems        CartItem[]
 }
 
 model Recipe {
@@ -103,8 +104,22 @@ model CartItem {
   quantity     Float
   // 'auto' derived from weekly plan; 'manual' added by user.
   source       String
+  // Optional free-form note (used by manual lines).
+  note         String?
   updatedAt    DateTime @updatedAt
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
 
   @@unique([week, ingredientId, unit, source])
   @@index([week])
+}
+
+model CartHistory {
+  id         String   @id @default(cuid())
+  // ISO week label "YYYY-Www"; one row per past week.
+  week       String   @unique
+  weekStart  String
+  weekEnd    String
+  weekLabel  String
+  itemsJson  String
+  takenAt    DateTime @default(now())
 }
