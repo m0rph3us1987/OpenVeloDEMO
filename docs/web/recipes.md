@@ -3,7 +3,7 @@ type: Guide
 title: Recipes Page
 description: Architecture and tester workflow for creating, editing, and deleting recipes on the web application.
 tags: [web, recipes, guide, tester]
-timestamp: 2026-07-26T14:09:19Z
+timestamp: 2026-07-26T15:23:53Z
 ---
 
 # Purpose
@@ -32,7 +32,7 @@ The `/recipes` route replaces the former placeholder with a recipe management pa
 - While the initial list request is pending, the page shows `Loading recipes...`.
 - If there are no recipes after loading, the page shows `No recipes yet — add your first one`.
 - If loading fails, the page shows `Could not load recipes.` and a `Retry` button.
-- Mutation failures are displayed as inline alert text inside the editor or delete confirm block.
+- Mutation failures are displayed as inline alert text inside the editor or delete confirm block. The text is the API's `error` string with the stable `code` appended in parentheses when present (for example `Recipe cannot be deleted because it is referenced by other records (REFERENCED_BY_OTHER_RECORD)`).
 
 # Examples
 

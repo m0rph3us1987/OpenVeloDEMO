@@ -3,7 +3,7 @@ type: Guide
 title: Tester Walkthrough
 description: Navigation steps and expected UI behaviors for each route in the OpenVelo web app.
 tags: [guide, tester, ui]
-timestamp: 2026-07-26T12:57:49Z
+timestamp: 2026-07-26T15:23:53Z
 ---
 
 # Prerequisites
@@ -48,7 +48,11 @@ If the viewport is short, the sidebar scrolls internally (`overflow-y-auto`) ins
 
 **Expected behavior:**
 - Heading: `Recipes`.
-- No other content (placeholder page).
+- `Add Recipe` button, an ingredients-driven recipe table, and per-row `Edit` / `Delete` actions.
+- Inline create editor, modal edit dialog, and inline delete confirm block with the expected inline validation messages (`Recipe name is required`, `Pick an ingredient`, `Quantity must be greater than 0`).
+- API error messages from create, edit, or delete are surfaced inside the relevant editor. When the API responds with both an `error` string and a stable `code`, the page renders `<error> (<code>)` — for example `Recipe cannot be deleted because it is referenced by other records (REFERENCED_BY_OTHER_RECORD)`.
+
+See [Recipes Page](/web/recipes.md) for the full add/edit/delete interaction steps.
 
 # Route: Ingredients (`/ingredients`)
 

@@ -4,7 +4,7 @@ okf_version: "0.1"
 
 # Overview
 
-OpenVelo is a meal-planning application composed of an Express API, a React web client, and a shared types package. These documents describe the architecture, data model, and user-facing flows for the current build. The [Recipes API](/api/recipes.md) now performs a transactional cleanup of `MealPlanSlot`, `CookLog`, and `CartSnapshot` dependents when a recipe is deleted, returning `409 REFERENCED_BY_OTHER_RECORD` on leftover foreign-key conflicts.
+OpenVelo is a meal-planning application composed of an Express API, a React web client, and a shared types package. These documents describe the architecture, data model, and user-facing flows for the current build. The [Recipes API](/api/recipes.md) now performs a transactional cleanup of `MealPlanSlot`, `CookLog`, `CartSnapshot`, and `RecipeIngredient` dependents when a recipe is deleted, returning `409 REFERENCED_BY_OTHER_RECORD` on leftover foreign-key conflicts. The web [Recipes Page](/web/recipes.md) renders API error messages as `<error> (<code>)` so testers can see the stable error code inline.
 
 # Architecture
 
