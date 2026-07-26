@@ -28,8 +28,9 @@ Routing is configured in `apps/web/src/App.tsx` using `react-router-dom` and a s
 | `/recipes` | `Recipes` | Placeholder page. |
 | `/ingredients` | `Ingredients` | Placeholder page. |
 | `/shopping-cart` | `ShoppingCart` | Placeholder page. |
+| `*` | `NotFound` | Wildcard; matches any unmatched path (including nested ones like `/recipes/new`). See [NotFound Page](/web/not-found.md). |
 
-All routes are children of the `Layout` component, which renders the sidebar and an `<Outlet />`.
+All routes are children of the `Layout` component, which renders the sidebar and an `<Outlet />`. The root layout also sets `errorElement: <RouterErrorElement />` so thrown errors (including 404 responses) are caught and rendered inside the same persistent shell. See [RouterErrorElement](/web/router-error-element.md).
 
 # State
 
@@ -48,7 +49,9 @@ The shell uses a persistent two-column flex layout: a responsive sidebar (always
 | `apps/web/src/main.tsx` | App bootstrap, providers, theme init. |
 | `apps/web/src/App.tsx` | Router and route table. |
 | `apps/web/src/components/Layout.tsx` | Persistent responsive sidebar, nav links, theme toggle, content outlet. |
+| `apps/web/src/components/RouterErrorElement.tsx` | Root route error boundary; handles thrown 404/500 responses and unexpected errors. See [RouterErrorElement](/web/router-error-element.md). |
 | `apps/web/src/pages/PlaceholderPages.tsx` | Initial placeholder content for each route. |
+| `apps/web/src/pages/NotFound.tsx` | Unmatched-route fallback (wildcard `*` child). See [NotFound Page](/web/not-found.md). |
 | `apps/web/src/components/ui/button.tsx` | Shared button primitive (CVA variants) with focus-ring base. |
 | `apps/web/src/index.css` | CSS custom properties (background, foreground, muted, accent, ring) for light + dark. |
 | `apps/web/tailwind.config.ts` | Tailwind theme tokens (background, foreground, muted, accent, ring). |
@@ -62,6 +65,7 @@ The shell uses a persistent two-column flex layout: a responsive sidebar (always
 1. The four nav links render inside the sidebar.
 2. The active route receives the `bg-accent text-background` classes while siblings do not.
 3. Nav links and the theme toggle both carry the `focus-visible:ring-2` and `focus-visible:ring-ring` classes.
+4. Unknown routes (e.g. `/unknown-route`, `/recipes/new`) keep the sidebar visible and render the [NotFound Page](/web/not-found.md).
 
 # Adding a New Page
 

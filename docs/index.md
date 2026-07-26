@@ -1,5 +1,6 @@
 ---
 okf_version: "0.1"
+timestamp: 2026-07-26T12:03:52Z
 ---
 
 # Overview
@@ -21,8 +22,9 @@ OpenVelo is a meal-planning application composed of an Express API, a React web 
 * [Prisma Schema](/database/schema.md) - Models for ingredients, recipes, meal plans, cook logs, and shopping cart snapshots.
 
 # Web
-
 * [Layout Component](/web/layout.md) - Responsive persistent sidebar navigation, theme toggle, and content outlet.
+* [NotFound Page](/web/not-found.md) - Wildcard fallback page rendered for any unmatched route.
+* [RouterErrorElement](/web/router-error-element.md) - Root route error boundary for thrown 404 responses and unexpected errors.
 * [Theme Store](/web/theme-store.md) - Zustand store with persistence and OS preference fallback.
 * [Focus Ring Design Token](/web/focus-ring.md) - Shared `ring-ring` focus-visible style and `--ring` CSS variable.
 
