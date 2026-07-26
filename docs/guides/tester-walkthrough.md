@@ -3,7 +3,7 @@ type: Guide
 title: Tester Walkthrough
 description: Navigation steps and expected UI behaviors for each route in the OpenVelo web app.
 tags: [guide, tester, ui]
-timestamp: 2026-07-26T16:48:00Z
+timestamp: 2026-07-26T17:28:38Z
 ---
 
 # Prerequisites
@@ -77,8 +77,15 @@ Follow the complete interaction steps in [Ingredients Page](/web/ingredients.md)
 **How to reach it:** Click `Shopping Cart` in the sidebar.
 
 **Expected behavior:**
-- Heading: `Shopping Cart`.
-- No other content (placeholder page).
+- Heading: `Shopping Cart`, with a `Week` selector defaulting to the current ISO week.
+- Ingredient rows grouped by category with `Ingredient`, `Auto`, `Manual`, and `Total` columns plus `Plan` and/or `Manual` badges.
+- Plan-derived quantities are read-only; current-week manual contributions can be added, edited, and deleted without changing the auto amount.
+- The `Add manual line` form provides an ingredient search picker, positive quantity input, unit selector (`g`, `kg`, `ml`, `l`, `pcs`), optional note, and `Add to cart` button.
+- Empty carts show `Your cart is empty. Add an item below or plan a recipe.`
+- Choosing a past week shows a `Viewing <week label> — read only` banner and hides add, edit, and delete controls.
+- Loading, retryable read errors, validation errors, and dismissible mutation-error banners are visible.
+
+Follow the complete interaction steps in [Shopping Cart Page](/web/shopping-cart.md).
 
 # Sidebar Active State
 

@@ -1,27 +1,30 @@
 ---
 type: Architecture
 title: Cart Recompute
-description: Auto-derived CartItem aggregation that runs after every Plan API mutation when the affected week equals the current ISO week.
+description: Base-unit plan aggregation and persisted auto CartItem recomputation used by the Plan and Shopping Cart APIs.
 tags: [architecture, cart, plan, recompute]
-timestamp: 2026-07-26T15:59:39Z
+timestamp: 2026-07-26T17:28:38Z
 ---
 
 # Overview
 
-`apps/api/src/cart-recompute.ts` exports two functions that bridge the [Plan API](/api/plan.md) and the [Database Schema](/database/schema.md):
+`apps/api/src/cart-recompute.ts` exports shared helpers that bridge the [Plan API](/api/plan.md), [Shopping Cart API](/api/cart.md), and [Database Schema](/database/schema.md):
 
+- `unitToBase(unit)` — normalizes `kg` to `g`, `l` to `ml`, and accepts `g`, `ml`, and `pcs` directly.
+- `sumMealPlanSlots(slots, ingredientBaseUnit?)` — calculates plan totals in memory for persisted recomputation and live cart reads.
 - `recomputeAutoCartForWeek(prisma, week, tx?)` — rebuilds every `CartItem` row with `source = 'auto'` for the given ISO week.
-- `fetchCurrentWeek(prisma)` — returns the current ISO week label (`YYYY-Www`) computed in UTC.
+- `fetchCurrentWeek(prisma)` — returns the current local ISO week label (`YYYY-Www`).
 
 The Plan router calls `recomputeIfCurrentWeek()` after `POST`, `PATCH`, and `DELETE`. The function delegates to `recomputeAutoCartForWeek()` only when the affected week equals `fetchCurrentWeek()`.
 
 # Algorithm
 
-1. Read every `MealPlanSlot` for the given `week` with the related `Recipe` and its `RecipeIngredient` rows.
-2. For each slot, scale every ingredient row by `slot.servings` (default `1`).
-3. Sum `(ingredientId, unit)` tuples into a `Map`.
-4. Delete every existing `CartItem` row with `week = <week>` and `source = 'auto'`. `source = 'manual'` rows are preserved.
-5. Bulk-insert the aggregated rows with `source = 'auto'`.
+1. Read every `MealPlanSlot` for the given `week` with the related `Recipe` and its `RecipeIngredient` rows, plus ingredient base units.
+2. Normalize ingredient quantities into `g`, `ml`, or `pcs`; incompatible unit dimensions are skipped.
+3. For each slot, scale every valid ingredient row by `slot.servings` (default `1`).
+4. Sum `(ingredientId, base unit)` tuples into a `Map`.
+5. Delete every existing `CartItem` row with `week = <week>` and `source = 'auto'`. `source = 'manual'` rows are preserved.
+6. Bulk-insert the aggregated rows with `source = 'auto'`.
 
 The function accepts an optional Prisma `TransactionClient`. When supplied, all reads/writes execute inside the outer `$transaction`; when omitted, the function executes directly against `prisma`.
 
@@ -34,13 +37,18 @@ Plan router (apps/api/src/plan.ts)
   └── DELETE /api/plan/:id        → recomputeIfCurrentWeek → recomputeAutoCartForWeek
 
 recomputeAutoCartForWeek
-  └── CartItem (week, ingredientId, unit, source, quantity)
-        source IN ('auto', 'manual')   ← enforced by CartItem_source_enum[_update] triggers
+  └── sumMealPlanSlots → CartItem (week, ingredientId, base unit, source, quantity)
+
+GET /api/cart or historical snapshot creation
+  └── aggregateCartForWeek → sumMealPlanSlots + manual CartItem rows → grouped response
+
+CartItem source IN ('auto', 'manual') ← enforced by CartItem_source_enum[_update] triggers
 ```
 
 # Invariants
 
-- `quantity = recipeIngredient.quantity * slot.servings` summed across all slots sharing `(ingredientId, unit)`.
+- `quantity = normalized recipeIngredient.quantity * slot.servings` summed across all slots sharing `(ingredientId, base unit)`.
+- Supported inputs normalize as `kg → g` and `l → ml`; `g`, `ml`, and `pcs` remain unchanged.
 - `source = 'auto'` rows are recomputed wholesale; `source = 'manual'` rows are user-added and are never touched by this function.
 - The unique index `CartItem_week_ingredientId_unit_source_key` keeps duplicate `(week, ingredientId, unit, source)` rows from coexisting.
 
@@ -48,7 +56,8 @@ recomputeAutoCartForWeek
 
 | File | Responsibility |
 |------|----------------|
-| `apps/api/src/cart-recompute.ts` | `recomputeAutoCartForWeek()` and `fetchCurrentWeek()` helpers. |
+| `apps/api/src/cart-recompute.ts` | Unit normalization, pure plan-slot summation, `recomputeAutoCartForWeek()`, and `fetchCurrentWeek()`. |
+| `apps/api/src/cart-snapshot.ts` | Reuses `sumMealPlanSlots()` for live and historical [Shopping Cart API](/api/cart.md) responses. |
 | `apps/api/src/plan.ts` | Calls `recomputeIfCurrentWeek()` after every mutation. |
 | `apps/api/prisma/schema.prisma` | `CartItem` model definition. |
 | `apps/api/prisma/constraints.sql` | Idempotent triggers enforcing `CartItem.source IN ('auto','manual')`. |

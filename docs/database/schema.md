@@ -1,9 +1,9 @@
 ---
 type: Database
 title: Prisma Schema
-description: Core data model for OpenVelo — ingredients, recipes, meal plans, cook logs, and shopping cart snapshots.
+description: Core data model for OpenVelo — ingredients, recipes, meal plans, cook logs, live cart items, and frozen cart history.
 tags: [database, prisma, schema]
-timestamp: 2026-07-26T15:24:43Z
+timestamp: 2026-07-26T17:28:38Z
 ---
 
 # Overview
@@ -94,7 +94,7 @@ Persisted shopping cart state for a recipe.
 
 ## CartItem
 
-The auto-derived shopping list aggregated from every [MealPlanSlot](#mealplanslot) in a given ISO week. Maintained by the [Cart Recompute](/architecture/cart-recompute.md) pipeline after every Plan mutation.
+The weekly shopping list persisted for a given ISO week. `auto` rows are maintained by the [Cart Recompute](/architecture/cart-recompute.md) pipeline after Plan mutations; `manual` rows are managed by the [Shopping Cart API](/api/cart.md).
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -102,21 +102,38 @@ The auto-derived shopping list aggregated from every [MealPlanSlot](#mealplanslo
 | `week` | `String` | ISO week label `YYYY-Www` (indexed). |
 | `ingredientId` | `String` | FK → `Ingredient.id`. |
 | `unit` | `String` | One of `g`, `ml`, or `pcs`. |
-| `quantity` | `Float` | Sum of every slot's `RecipeIngredient.quantity * slot.servings` for the (week, ingredientId, unit) tuple. |
+| `quantity` | `Float` | Base-unit amount. Auto rows contain summed `RecipeIngredient.quantity * slot.servings`; manual rows contain the user-entered contribution after normalization. |
 | `source` | `String` | One of `auto` (derived from the plan) or `manual` (user-added). Enforced at the API and database layers. |
+| `note` | `String?` | Optional free-form note for manual lines. |
 | `updatedAt` | `DateTime` | Auto-updated on write. |
+| `ingredient` | relation | FK → `Ingredient.id`. |
 
 Unique index: `(week, ingredientId, unit, source)` — no two rows may share the same `(week, ingredient, unit, source)` tuple.
+
+## CartHistory
+
+An immutable-by-convention weekly shopping-cart snapshot used by the [Shopping Cart API](/api/cart.md). Past weeks are materialized lazily on their first read or while listing available historical weeks; later reads return `itemsJson` rather than recomputing from mutable plan and manual rows.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `String` (cuid) | Primary key. |
+| `week` | `String` | Unique ISO week label `YYYY-Www`; one snapshot per past week. |
+| `weekStart` | `String` | Inclusive Monday date in `YYYY-MM-DD` format. |
+| `weekEnd` | `String` | Inclusive Sunday date in `YYYY-MM-DD` format. |
+| `weekLabel` | `String` | Persisted user-facing week and date-range label. |
+| `itemsJson` | `String` | Serialized array of grouped cart items, including auto/manual quantities and sources. |
+| `takenAt` | `DateTime` | Snapshot creation time, defaulting to `now()`. |
 
 # Relationships
 
 ```
 Ingredient ──< RecipeIngredient >── Recipe
-   │                                  │
-   │                                  ├──< MealPlanSlot ──< CookLog
-   └──< CookLog                       ├──< CookLog
-                                      ├──< CartSnapshot
-                                      └──< CartItem (week, source=auto|manual)
+    │                                  │
+    │                                  ├──< MealPlanSlot ──< CookLog
+    ├──< CookLog                       ├──< CookLog
+    └──< CartItem                      └──< CartSnapshot
+
+CartHistory (one frozen snapshot per ISO week; grouped cart data in itemsJson)
 ```
 
 # Recipe Delete Cascade (API layer)
