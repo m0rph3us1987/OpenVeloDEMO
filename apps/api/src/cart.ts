@@ -14,12 +14,33 @@ import {
   loadCartForWeek,
   unitToBase,
   type CartLineRecord,
+  type DisplayUnit,
 } from './cart-snapshot.js';
 import type { PlanApiError } from './errors.js';
 
 const displayUnitSchema = z.enum(
   DISPLAY_UNITS as readonly ['g', ...typeof DISPLAY_UNITS[number][]],
 );
+
+function displayUnitsForBase(base: 'g' | 'ml' | 'pcs'): DisplayUnit[] {
+  switch (base) {
+    case 'g':
+      return ['g', 'kg'];
+    case 'ml':
+      return ['ml', 'l'];
+    case 'pcs':
+      return ['pcs'];
+  }
+}
+
+function resolveIngredientBaseUnit(
+  defaultUnit: string,
+): { unit: 'g' | 'ml' | 'pcs'; allowedDisplayUnits: DisplayUnit[] } | null {
+  const base = unitToBase(defaultUnit);
+  if (!base) return null;
+  if (base.unit !== 'g' && base.unit !== 'ml' && base.unit !== 'pcs') return null;
+  return { unit: base.unit, allowedDisplayUnits: displayUnitsForBase(base.unit) };
+}
 
 const createLineSchema = z
   .object({
@@ -171,6 +192,25 @@ export function createCartRouter(prisma: PrismaClient): Router {
         sendError(res, notFound('Ingredient not found'));
         return;
       }
+      const ingredientBase = resolveIngredientBaseUnit(ingredient.defaultUnit);
+      if (!ingredientBase) {
+        sendValidation(res, [
+          fieldError(
+            'ingredientId',
+            `ingredient has an unsupported default unit "${ingredient.defaultUnit}"`,
+          ),
+        ]);
+        return;
+      }
+      if (normalized.unit !== ingredientBase.unit) {
+        sendValidation(res, [
+          fieldError(
+            'unit',
+            `unit must match the ingredient's allowed base units (${ingredientBase.allowedDisplayUnits.join(', ')})`,
+          ),
+        ]);
+        return;
+      }
       const current = await fetchCurrentWeek(prisma);
       const baseIncrement = data.quantity * normalized.factor;
       // Each POST creates a distinct manual CartItem row. Repeating the
@@ -256,6 +296,15 @@ export function createCartRouter(prisma: PrismaClient): Router {
         return;
       }
 
+      const ingredientBase = resolveIngredientBaseUnit(existing.ingredient.defaultUnit);
+      if (!ingredientBase) {
+        sendError(
+          res,
+          conflict('Ingredient has an unsupported default unit', 'INVALID_UNIT'),
+        );
+        return;
+      }
+
       const data: Prisma.CartItemUpdateInput = {};
       if (parsed.data.note !== undefined) data.note = parsed.data.note;
 
@@ -266,6 +315,15 @@ export function createCartRouter(prisma: PrismaClient): Router {
         const normalized = unitToBase(parsed.data.unit!);
         if (!normalized) {
           sendValidation(res, [fieldError('unit', 'unit is not supported')]);
+          return;
+        }
+        if (normalized.unit !== ingredientBase.unit) {
+          sendValidation(res, [
+            fieldError(
+              'unit',
+              `unit must match the ingredient's allowed base units (${ingredientBase.allowedDisplayUnits.join(', ')})`,
+            ),
+          ]);
           return;
         }
         data.unit = normalized.unit;
@@ -279,6 +337,15 @@ export function createCartRouter(prisma: PrismaClient): Router {
         const normalized = unitToBase(unitInput);
         if (!normalized) {
           sendValidation(res, [fieldError('unit', 'unit is not supported')]);
+          return;
+        }
+        if (normalized.unit !== ingredientBase.unit) {
+          sendValidation(res, [
+            fieldError(
+              'unit',
+              `unit must match the ingredient's allowed base units (${ingredientBase.allowedDisplayUnits.join(', ')})`,
+            ),
+          ]);
           return;
         }
         const fromBase = unitToBase(existing.unit);

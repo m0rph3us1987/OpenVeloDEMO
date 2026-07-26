@@ -164,6 +164,35 @@ describe('Cart API', () => {
     expect(res.body.code).toBe('INVALID_INPUT');
   });
 
+  it('POST /api/cart/lines rejects unit that does not match ingredient base unit', async () => {
+    const beef = await seedIngredient('Beef', 'Meat', 'g');
+    const res = await request(app)
+      .post('/api/cart/lines')
+      .send({ ingredientId: beef, quantity: 100, unit: 'ml' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    const details = res.body.details as Array<{ field: string; message: string }>;
+    expect(details).toEqual([
+      expect.objectContaining({ field: 'unit' }),
+    ]);
+    expect(details[0].message).toMatch(/g/);
+    // No manual row was persisted.
+    const stored = await prisma.cartItem.count({
+      where: { ingredientId: beef, source: 'manual' },
+    });
+    expect(stored).toBe(0);
+  });
+
+  it('POST /api/cart/lines allows kg for a g-base ingredient (same dimension)', async () => {
+    const beef = await seedIngredient('Beef', 'Meat', 'g');
+    const res = await request(app)
+      .post('/api/cart/lines')
+      .send({ ingredientId: beef, quantity: 1, unit: 'kg' });
+    expect(res.status).toBe(201);
+    expect(res.body.unit).toBe('g');
+    expect(res.body.quantity).toBe(1000);
+  });
+
   it('PATCH on an auto-sourced line returns 409', async () => {
     const ing = await seedIngredient('Beef', 'Meat', 'g');
     const week = currentWeek();
@@ -305,6 +334,42 @@ describe('Cart API', () => {
     // changes when the conversion is a no-op within the same dimension.
     expect(res.body.unit).toBe('ml');
     expect(res.body.quantity).toBe(1000);
+  });
+
+  it('PATCH rejects unit that does not match ingredient base unit', async () => {
+    const beef = await seedIngredient('Beef', 'Meat', 'g');
+    const created = await request(app)
+      .post('/api/cart/lines')
+      .send({ ingredientId: beef, quantity: 500, unit: 'g' });
+    expect(created.status).toBe(201);
+
+    const res = await request(app)
+      .patch(`/api/cart/lines/${created.body.id}`)
+      .send({ quantity: 1, unit: 'ml' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    const details = res.body.details as Array<{ field: string; message: string }>;
+    expect(details[0]).toEqual(expect.objectContaining({ field: 'unit' }));
+
+    const unchanged = await prisma.cartItem.findUniqueOrThrow({
+      where: { id: created.body.id },
+    });
+    expect(unchanged.unit).toBe('g');
+    expect(unchanged.quantity).toBe(500);
+  });
+
+  it('PATCH rejects unit-only change to a mismatched base unit', async () => {
+    const beef = await seedIngredient('Beef', 'Meat', 'g');
+    const created = await request(app)
+      .post('/api/cart/lines')
+      .send({ ingredientId: beef, quantity: 500, unit: 'g' });
+    expect(created.status).toBe(201);
+
+    const res = await request(app)
+      .patch(`/api/cart/lines/${created.body.id}`)
+      .send({ unit: 'ml' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
   });
 
   it('GET /api/cart/weeks/:weekKey lazily freezes a past week and is idempotent', async () => {

@@ -12,6 +12,7 @@ import {
   createCartLine,
   deleteCartLine,
   DISPLAY_UNITS,
+  displayUnitsForBase,
   fetchCartWeeks,
   fetchCurrentCart,
   fetchWeekCart,
@@ -245,6 +246,10 @@ function AddManualForm(props: AddFormProps): JSX.Element {
     [ingredients, selectedId],
   );
 
+  const allowedUnits: readonly DisplayUnit[] = selected
+    ? displayUnitsForBase(selected.baseUnit)
+    : DISPLAY_UNITS;
+
   const errorId = useId();
   const quantityId = useId();
   const unitId = useId();
@@ -252,7 +257,8 @@ function AddManualForm(props: AddFormProps): JSX.Element {
 
   useEffect(() => {
     if (selected) {
-      setUnit(defaultUnitForBase(selected.baseUnit));
+      const allowed = displayUnitsForBase(selected.baseUnit);
+      setUnit((prev) => (allowed.includes(prev) ? prev : defaultUnitForBase(selected.baseUnit)));
     }
   }, [selected]);
 
@@ -265,6 +271,13 @@ function AddManualForm(props: AddFormProps): JSX.Element {
     }
     if (!Number.isFinite(qty) || qty <= 0) {
       setValidation('Quantity must be greater than 0');
+      return;
+    }
+    const allowed = displayUnitsForBase(selected.baseUnit);
+    if (!allowed.includes(unit)) {
+      setValidation(
+        `Unit must match the ingredient's allowed base units (${allowed.join(', ')})`,
+      );
       return;
     }
     setValidation(null);
@@ -339,7 +352,7 @@ function AddManualForm(props: AddFormProps): JSX.Element {
               'border-muted',
             )}
           >
-            {DISPLAY_UNITS.map((u) => (
+            {allowedUnits.map((u) => (
               <option key={u} value={u}>
                 {u}
               </option>
@@ -757,7 +770,7 @@ export function ShoppingCart(): JSX.Element {
                           key={`${item.ingredientId}-${item.unit}-${item.manualLineId ?? 'auto'}`}
                           item={item}
                           editable={isCurrent}
-                          unitOptions={DISPLAY_UNITS}
+                          unitOptions={displayUnitsForBase(item.unit)}
                           onSave={(input) => {
                             if (!item.manualLineId) return;
                             updateMutation.mutate({ id: item.manualLineId, input });
