@@ -38,9 +38,14 @@ If the viewport is short, the sidebar scrolls internally (`overflow-y-auto`) ins
 
 **Expected behavior:**
 - Heading: `Dashboard`.
-- Introductory paragraph: `Welcome to OpenVelo. Use the sidebar to navigate.`
-- A bulleted list of three cross-links: `Recipes`, `Ingredients`, `Shopping Cart`.
-- Each link is underlined and navigates to the corresponding route.
+- Subtitle: `Plan your meals for the week and track what you have cooked.`
+- A control row with `←`, `→`, and `Today` buttons plus a `Week of <YYYY-MM-DD> – <YYYY-MM-DD>` label.
+- A seven-column `Weekly plan` grid (Monday → Sunday). Today's column is highlighted with `border-accent ring-2 ring-ring` when viewing the current ISO week.
+- Each column has a `+ Add` button. Each planned meal shows the meal-slot label, the recipe name, optional notes, an `I cooked this` button, and a red `X` delete button.
+- Below the grid, a `Planned slots` table (Day / Slot / Recipe / Notes) mirrors the planned slots. The recipe name is an underlined edit trigger.
+- At the bottom, a `Total times cooked per recipe` table (Recipe / Times cooked / Last cooked) summarises cook logs for the active week.
+
+See [Dashboard Page](/web/dashboard.md) for the full add/edit/delete/cook interaction steps.
 
 # Route: Recipes (`/recipes`)
 
