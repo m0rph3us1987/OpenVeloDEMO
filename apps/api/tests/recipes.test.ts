@@ -229,6 +229,48 @@ describe('Recipes API', () => {
     expect(follow.status).toBe(404);
   });
 
+  it('DELETE /api/recipes/:id cascades to CookLog and MealPlanSlot dependents', async () => {
+    const ids = await seedIngredients();
+    const created = await request(app)
+      .post('/api/recipes')
+      .send({
+        name: 'With Dependents',
+        ingredients: [{ ingredientId: ids.salt, quantity: 1, unit: 'g' }],
+      });
+    const recipeId = created.body.id;
+    await prisma.cookLog.createMany({
+      data: [{ recipeId }, { recipeId }],
+    });
+    await prisma.mealPlanSlot.create({
+      data: { recipeId, date: new Date('2026-07-26'), slot: 'dinner' },
+    });
+    const del = await request(app).delete(`/api/recipes/${recipeId}`);
+    expect(del.status).toBe(204);
+    expect(await prisma.recipe.count({ where: { id: recipeId } })).toBe(0);
+    expect(await prisma.recipeIngredient.count({ where: { recipeId } })).toBe(0);
+    expect(await prisma.cookLog.count({ where: { recipeId } })).toBe(0);
+    expect(await prisma.mealPlanSlot.count({ where: { recipeId } })).toBe(0);
+  });
+
+  it('DELETE /api/recipes/:id nulls out CartSnapshot.recipeId instead of deleting the snapshot', async () => {
+    const ids = await seedIngredients();
+    const created = await request(app)
+      .post('/api/recipes')
+      .send({
+        name: 'With Cart',
+        ingredients: [{ ingredientId: ids.salt, quantity: 1, unit: 'g' }],
+      });
+    const recipeId = created.body.id;
+    const snapshot = await prisma.cartSnapshot.create({
+      data: { recipeId, itemsJson: '{}' },
+    });
+    const del = await request(app).delete(`/api/recipes/${recipeId}`);
+    expect(del.status).toBe(204);
+    const after = await prisma.cartSnapshot.findUnique({ where: { id: snapshot.id } });
+    expect(after).not.toBeNull();
+    expect(after?.recipeId).toBeNull();
+  });
+
   it('DELETE /api/recipes/:id with unknown id returns 404', async () => {
     const res = await request(app).delete('/api/recipes/does-not-exist');
     expect(res.status).toBe(404);

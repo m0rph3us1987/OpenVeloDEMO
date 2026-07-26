@@ -3,7 +3,7 @@ type: Database
 title: Prisma Schema
 description: Core data model for OpenVelo — ingredients, recipes, meal plans, cook logs, and shopping cart snapshots.
 tags: [database, prisma, schema]
-timestamp: 2026-07-26T13:54:15Z
+timestamp: 2026-07-26T15:05:40Z
 ---
 
 # Overview
@@ -95,6 +95,19 @@ Ingredient ──< RecipeIngredient >── Recipe
    └──< CookLog                       ├──< CookLog
                                       └──< CartSnapshot
 ```
+
+# Recipe Delete Cascade (API layer)
+
+`DELETE /api/recipes/:id` in `apps/api/src/recipes.ts` runs a single Prisma `$transaction` to keep the database consistent. The table below summarizes which dependents are removed, nulled, or left intact for each relation:
+
+| Dependent relation | On recipe delete | Reason |
+|--------------------|------------------|--------|
+| `RecipeIngredient` | Removed (cascade). | Already handled by the schema's cascade rule on the `Recipe.ingredients` relation. |
+| `MealPlanSlot` | Removed (`deleteMany`). | A meal-plan entry for a recipe that no longer exists is meaningless. |
+| `CookLog` | Removed (`deleteMany`). | Cook history is meaningless once the recipe itself is gone. |
+| `CartSnapshot` | `recipeId` set to `NULL` (`updateMany`). | Shopping-cart history is preserved as an anonymous snapshot; only the FK link is severed. |
+
+If a foreign-key constraint still fires (Prisma error code `P2003`) after the steps above, the API responds with `409 REFERENCED_BY_OTHER_RECORD` — see [Recipes API](/api/recipes.md).
 
 # Migrations
 
