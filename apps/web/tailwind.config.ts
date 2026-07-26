@@ -10,6 +10,7 @@ const config: Config = {
         foreground: 'hsl(var(--foreground))',
         muted: 'hsl(var(--muted))',
         accent: 'hsl(var(--accent))',
+        ring: 'hsl(var(--ring))',
       },
     },
   },
