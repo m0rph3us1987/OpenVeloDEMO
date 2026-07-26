@@ -3,7 +3,7 @@ type: API
 title: Recipes API
 description: CRUD endpoints for listing, creating, updating, and deleting persisted recipes, including the recipe ingredient rows.
 tags: [api, recipes, express, prisma]
-timestamp: 2026-07-26T14:09:19Z
+timestamp: 2026-07-26T15:05:40Z
 ---
 
 # Overview
@@ -74,7 +74,11 @@ The web [Recipes Page](/web/recipes.md) calls these routes through the Vite `/ap
 - Every entry whose `ingredientId` does not reference an existing `Ingredient` is reported in `details` as `ingredients.<index>.ingredientId`.
 - `PATCH` to an unknown identifier returns `404 NOT_FOUND`.
 - `DELETE` of an unknown identifier returns `404 NOT_FOUND`.
-- The Prisma schema cascade-deletes `RecipeIngredient` rows when a `Recipe` is removed, so `DELETE /api/recipes/:id` cleans up its children in a single call.
+- `DELETE` wraps the delete and its dependent cleanup in a single Prisma `$transaction`:
+  - Cascades: every `MealPlanSlot` and `CookLog` row referencing the recipe is removed first (these are children the application agrees should disappear with the recipe).
+  - Nulls out: every `CartSnapshot.recipeId` referencing the recipe is set to `NULL` so the persisted cart history is preserved.
+  - Then the `Recipe` row itself is deleted (its `RecipeIngredient` rows are cleaned up automatically by the schema's existing cascade rule).
+- If the transaction raises a Prisma `P2003` foreign-key error (a remaining FK reference the transaction above did not expect), the handler responds with `409 REFERENCED_BY_OTHER_RECORD` instead of a generic `500`.
 - The database additionally enforces `unit IN ('g','ml','pcs')` via a `CHECK` constraint in the initial migration and an idempotent SQLite trigger (`RecipeIngredient_unit_enum`) installed by `apps/api/scripts/ensure-db.mjs` on every bootstrap. Direct database writers that bypass the API and supply an unsupported unit are rejected by the trigger with an `ABORT`. The API router's zod validation still rejects bad units upstream with `400 INVALID_INPUT`; the trigger is defence-in-depth.
 
 # Wiring
