@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { createApp } from './app.js';
 import { bootstrap } from '../scripts/ensure-db.mjs';
-import { seed } from './seed.js';
+import { seed, shouldAutoSeed } from './seed.js';
 
 const target = await bootstrap();
 
@@ -15,7 +15,7 @@ const [ingCount, recCount] = await Promise.all([
   prisma.ingredient.count(),
   prisma.recipe.count(),
 ]);
-if (ingCount === 0 && recCount === 0) {
+if (shouldAutoSeed({ ingredientCount: ingCount, recipeCount: recCount })) {
   await seed(prisma);
 }
 

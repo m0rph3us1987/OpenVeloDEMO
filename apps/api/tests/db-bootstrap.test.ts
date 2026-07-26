@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { bootstrap, PATHS } from '../scripts/ensure-db.mjs';
 
@@ -110,5 +111,12 @@ describe('ensure-db bootstrap', () => {
     expect(target.ownsFile).toBe(false);
     expect(deps.access).not.toHaveBeenCalled();
     expect(deps.execFileSync).toHaveBeenCalledTimes(3);
+  });
+
+  it('seed.sql is ingredient-only and does not touch Recipe or RecipeIngredient', () => {
+    const contents = readFileSync(PATHS.SEED_PATH, 'utf8');
+    expect(contents).toMatch(/INSERT OR IGNORE INTO "Ingredient"/);
+    expect(contents).not.toMatch(/"Recipe"/);
+    expect(contents).not.toMatch(/"RecipeIngredient"/);
   });
 });

@@ -47,6 +47,8 @@ If the database file already exists, the `db push` step is skipped (only the see
 
 The seed uses stable IDs prefixed with `seed-…` so it can be referenced in tests and documentation.
 
+Recipe rows are **not** seeded by `seed.sql`. The four demo recipes are owned by the [Seed Data](/architecture/seed-data.md) TypeScript module, which `apps/api/src/server.ts` invokes on startup whenever the `Recipe` table is empty and which `POST /api/admin/reset` re-runs after wiping the workspace.
+
 # Wiring
 
 ```text

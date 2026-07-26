@@ -24,6 +24,13 @@ export type SeedResult = {
   recipesCreated: number;
 };
 
+export function shouldAutoSeed(counts: {
+  ingredientCount: number;
+  recipeCount: number;
+}): boolean {
+  return counts.recipeCount === 0;
+}
+
 export const SEED_INGREDIENTS: readonly SeedIngredient[] = [
   { name: 'Beef', category: 'Meat', baseUnit: 'g' },
   { name: 'Chicken Breast', category: 'Meat', baseUnit: 'g' },

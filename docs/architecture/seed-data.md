@@ -3,14 +3,14 @@ type: Architecture
 title: Seed Data
 description: Idempotent seed module that populates the database with 13 demo ingredients and 4 demo recipes, invoked on startup and after an admin reset.
 tags: [architecture, seed, demo, prisma]
-timestamp: 2026-07-26T19:12:38Z
+timestamp: 2026-07-26T19:21:08Z
 ---
 
 # Purpose
 
-`apps/api/src/seed.ts` ships a reusable `seed(prisma)` function plus the typed `SEED_INGREDIENTS` and `SEED_RECIPES` constants. It is invoked from two call sites:
+`apps/api/src/seed.ts` ships a reusable `seed(prisma)` function, the `shouldAutoSeed(counts)` guard, and the typed `SEED_INGREDIENTS` and `SEED_RECIPES` constants. It is invoked from two call sites:
 
-1. **API startup** — `apps/api/src/server.ts` runs `seed(prisma)` when both the `Ingredient` and `Recipe` tables are empty, so a fresh database is populated before the first HTTP request is served.
+1. **API startup** — `apps/api/src/server.ts` calls `shouldAutoSeed({ ingredientCount, recipeCount })` and, when it returns `true` (i.e. the `Recipe` table is empty), runs `seed(prisma)` before the first HTTP request is served. The check is **recipe-only**: if the SQL bootstrap has already pre-populated the seven demo ingredients, the TypeScript seed still runs to create the four demo recipes.
 2. **Admin reset** — `apps/api/src/admin.ts` clears every user-managed table and then calls `seed(prisma)` to restore the demo data.
 
 The seed is **idempotent**. Each ingredient is upserted by its unique `name`, and each recipe is skipped if a row with the same `title` already exists. Repeated calls are safe and only report newly created rows in the `SeedResult`.
@@ -18,9 +18,13 @@ The seed is **idempotent**. Each ingredient is upserted by its unique `name`, an
 # Behavior
 
 ```text
+shouldAutoSeed({ ingredientCount, recipeCount })
+  └── return recipeCount === 0
+        (ingredient rows do not gate auto-seeding; the SQL bootstrap
+         pre-populates seven of them and the TypeScript seed fills in
+         the rest on first boot.)
+
 seed(prisma)
-  ├── count existing Ingredient + Recipe rows
-  │     └── if both non-zero → return { ingredientsCreated: 0, recipesCreated: 0 }
   ├── for each SEED_INGREDIENT
   │     └── ingredient.upsert({ where: { name }, update: {}, create: { name, category, defaultUnit: baseUnit } })
   │           └── increment ingredientsCreated only when the row is new
@@ -54,7 +58,7 @@ The seed never edits rows it did not create — existing data is preserved and o
 | Pepper | Spices | `g` |
 | Olive Oil | Other | `ml` |
 
-> The [Database Bootstrap](/architecture/db-bootstrap.md) script additionally applies a hand-written `seed.sql` that pre-populates seven of these ingredients (`Beef`, `Tomato`, `Milk`, `Rice`, `Salt`, `Pepper`, `Olive Oil`) via `INSERT OR IGNORE` during `prisma db execute`. The TypeScript seed skips rows that already exist, so the two layers cooperate without duplicating rows.
+> The [Database Bootstrap](/architecture/db-bootstrap.md) script additionally applies a hand-written `seed.sql` that pre-populates seven of these ingredients (`Beef`, `Tomato`, `Milk`, `Rice`, `Salt`, `Pepper`, `Olive Oil`) via `INSERT OR IGNORE` during `prisma db execute`. The TypeScript seed skips rows that already exist, so the two layers cooperate without duplicating rows. Recipe rows are inserted exclusively by this TypeScript module — the SQL bootstrap is ingredient-only.
 
 # Seed Recipes
 
@@ -74,13 +78,13 @@ The seed never edits rows it did not create — existing data is preserved and o
 | `ingredientsCreated` | number | Number of new `Ingredient` rows inserted by this call. |
 | `recipesCreated` | number | Number of new `Recipe` rows inserted by this call. |
 
-Both counts are `0` when the seed bails out early because the database already has ingredients and recipes.
+Both counts are `0` only when no new rows were created; on a fresh database the SQL bootstrap pre-populates seven ingredients so `ingredientsCreated` is typically `0` while `recipesCreated` is `4`.
 
 # Wiring
 
 ```text
 apps/api/src/server.ts
-  └── if ingredient.count() === 0 && recipe.count() === 0
+  └── if shouldAutoSeed({ ingredientCount, recipeCount })
         └── seed(prisma)
 
 POST /api/admin/reset (apps/api/src/admin.ts)
@@ -94,10 +98,10 @@ POST /api/admin/reset (apps/api/src/admin.ts)
 
 | File | Responsibility |
 |------|----------------|
-| `apps/api/src/seed.ts` | `seed()` function, `SEED_INGREDIENTS`, `SEED_RECIPES`, and `SeedResult` type. |
-| `apps/api/src/server.ts` | Startup auto-seed for empty databases. |
+| `apps/api/src/seed.ts` | `seed()` function, `shouldAutoSeed()` guard, `SEED_INGREDIENTS`, `SEED_RECIPES`, and `SeedResult` type. |
+| `apps/api/src/server.ts` | Calls `shouldAutoSeed()` then `seed()` on startup when the `Recipe` table is empty. |
 | `apps/api/src/admin.ts` | Calls `seed()` after the destructive reset. |
-| `apps/api/tests/seed.test.ts` | Vitest coverage of idempotent inserts and early bail-out. |
+| `apps/api/tests/seed.test.ts` | Vitest coverage of idempotent inserts, recipe-only auto-seed, and the `shouldAutoSeed()` guard. |
 | `apps/api/prisma/schema.prisma` | Underlying models. See [Prisma Schema](/database/schema.md). |
 
 # Related
