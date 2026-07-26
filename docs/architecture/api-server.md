@@ -3,12 +3,12 @@ type: Architecture
 title: API Server
 description: Express server wiring, middleware order, and bootstrap entry points.
 tags: [api, express, server]
-timestamp: 2026-07-26T12:57:49Z
+timestamp: 2026-07-26T13:54:15Z
 ---
 
 # Entry Point
 
-The API is bootstrapped from `apps/api/src/server.ts`. It reads `PORT` (default `3001`), constructs the app via `createApp()`, and starts listening.
+The API is bootstrapped from `apps/api/src/server.ts`. On startup it calls `bootstrap()` from `apps/api/scripts/ensure-db.mjs` to ensure the SQLite database exists, has the current schema, and is seeded with demo ingredients. The resolved target URL is exported on `process.env.DATABASE_URL` when it was not already set. Then it reads `PORT` (default `3001`), constructs the app via `createApp()`, and starts listening. See [Database Bootstrap](/architecture/db-bootstrap.md) for the resolution and seed details.
 
 # App Composition
 
@@ -31,12 +31,15 @@ The API is bootstrapped from `apps/api/src/server.ts`. It reads `PORT` (default 
 
 | File | Responsibility |
 |------|----------------|
-| `apps/api/src/server.ts` | Bootstraps the HTTP server. |
+| `apps/api/src/server.ts` | Bootstraps the database, then starts the HTTP server. |
+| `apps/api/scripts/ensure-db.mjs` | Idempotent DB bootstrap (target resolution, `db push`, seed). See [Database Bootstrap](/architecture/db-bootstrap.md). |
+| `apps/api/prisma/seed.sql` | Idempotent demo ingredient seed. |
 | `apps/api/src/app.ts` | Composes middleware and routes, creates or accepts a Prisma client, and exports the app for tests. |
 | `apps/api/src/ingredients.ts` | Implements ingredient validation and CRUD routes. See [Ingredients API](/api/ingredients.md). |
 | `apps/api/prisma/schema.prisma` | Data model (see [Database Schema](/database/schema.md)). |
 | `apps/api/tests/health.test.ts` | Supertest check for `/api/health`. |
 | `apps/api/tests/ingredients.test.ts` | Supertest coverage for ingredient CRUD and errors. |
+| `apps/api/tests/db-bootstrap.test.ts` | Vitest coverage of the bootstrap resolution and short-circuit paths. |
 
 # Registering New Routes
 
@@ -52,3 +55,5 @@ Client (apps/web)
                      ├── /api/health
                      └── /api/ingredients ──► Prisma ──► SQLite
 ```
+
+Before the HTTP server starts, `apps/api/src/server.ts` calls `bootstrap()` from `apps/api/scripts/ensure-db.mjs` so the SQLite file exists, has the current schema, and contains the demo seed. See [Database Bootstrap](/architecture/db-bootstrap.md).

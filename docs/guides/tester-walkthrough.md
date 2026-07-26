@@ -57,6 +57,7 @@ If the viewport is short, the sidebar scrolls internally (`overflow-y-auto`) ins
 **Expected behavior:**
 - Heading: `Ingredients`.
 - An `Add ingredient` button, category filters, and a table of persisted ingredients.
+- On a fresh database the table is pre-populated with seven demo ingredients (`Beef`, `Tomato`, `Milk`, `Rice`, `Salt`, `Pepper`, `Olive Oil`) inserted by the [Database Bootstrap](/architecture/db-bootstrap.md) seed.
 - Users can create, edit, and delete ingredients through forms and confirmation dialogs.
 - Loading, empty-filter, request-error, and field-validation states are visible and actionable.
 
