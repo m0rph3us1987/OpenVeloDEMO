@@ -3,9 +3,9 @@ import { Layout } from '@/components/Layout';
 import { RouterErrorElement } from '@/components/RouterErrorElement';
 import {
   Dashboard,
-  Recipes,
   ShoppingCart,
 } from '@/pages/PlaceholderPages';
+import { Recipes } from '@/pages/Recipes';
 import { Ingredients } from '@/pages/Ingredients';
 import { NotFound } from '@/pages/NotFound';
 

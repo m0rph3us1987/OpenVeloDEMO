@@ -24,8 +24,8 @@ CREATE TABLE "RecipeIngredient" (
     "recipeId" TEXT NOT NULL,
     "ingredientId" TEXT NOT NULL,
     "quantity" REAL NOT NULL,
-    "unit" TEXT NOT NULL,
-    CONSTRAINT "RecipeIngredient_recipeId_fkey" FOREIGN KEY ("recipeId") REFERENCES "Recipe" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    "unit" TEXT NOT NULL CHECK ("unit" IN ('g','ml','pcs')),
+    CONSTRAINT "RecipeIngredient_recipeId_fkey" FOREIGN KEY ("recipeId") REFERENCES "Recipe" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "RecipeIngredient_ingredientId_fkey" FOREIGN KEY ("ingredientId") REFERENCES "Ingredient" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 

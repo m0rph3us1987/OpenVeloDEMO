@@ -28,6 +28,7 @@ const __dirname = path.dirname(__filename);
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const SCHEMA_PATH = path.join(PACKAGE_ROOT, 'prisma', 'schema.prisma');
 const SEED_PATH = path.join(PACKAGE_ROOT, 'prisma', 'seed.sql');
+const CONSTRAINTS_PATH = path.join(PACKAGE_ROOT, 'prisma', 'constraints.sql');
 
 const PERSISTENT_DIR = '/data/openvelo';
 const PERSISTENT_DB = path.join(PERSISTENT_DIR, 'dev.db');
@@ -43,6 +44,7 @@ export const PATHS = Object.freeze({
   LOCAL_DIR,
   LOCAL_DB,
   SCHEMA_PATH,
+  CONSTRAINTS_PATH,
   SEED_PATH,
   PRISMA_BIN,
 });
@@ -129,6 +131,13 @@ export async function bootstrap(deps = realDeps) {
   deps.log(`seeding ingredients from ${PATHS.SEED_PATH}`);
   runPrisma(
     ['db', 'execute', '--schema', PATHS.SCHEMA_PATH, '--file', PATHS.SEED_PATH],
+    { DATABASE_URL: target.url },
+    deps,
+  );
+
+  deps.log(`applying database constraints from ${PATHS.CONSTRAINTS_PATH}`);
+  runPrisma(
+    ['db', 'execute', '--schema', PATHS.SCHEMA_PATH, '--file', PATHS.CONSTRAINTS_PATH],
     { DATABASE_URL: target.url },
     deps,
   );

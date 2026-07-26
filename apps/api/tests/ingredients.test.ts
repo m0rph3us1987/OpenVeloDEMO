@@ -21,9 +21,18 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = databaseUrl;
   const prismaBin = path.resolve(__dirname, '..', '..', '..', 'node_modules', '.bin', 'prisma');
   const schemaPath = path.resolve(__dirname, '..', 'prisma', 'schema.prisma');
+  const constraintsPath = path.resolve(__dirname, '..', 'prisma', 'constraints.sql');
   execFileSync(
     prismaBin,
     ['db', 'push', '--skip-generate', '--accept-data-loss', '--schema', schemaPath],
+    {
+      stdio: 'pipe',
+      env: { ...process.env, DATABASE_URL: databaseUrl },
+    },
+  );
+  execFileSync(
+    prismaBin,
+    ['db', 'execute', '--schema', schemaPath, '--file', constraintsPath],
     {
       stdio: 'pipe',
       env: { ...process.env, DATABASE_URL: databaseUrl },
