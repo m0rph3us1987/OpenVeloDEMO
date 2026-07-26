@@ -120,33 +120,19 @@ export function buildGroupsFromAggregation(
   >,
   warn?: (message: string) => void,
 ): CartGroup[] {
-  type Entry = {
-    ingredientId: string;
-    name: string;
-    category: IngredientCategory;
-    unit: 'g' | 'ml' | 'pcs';
-    autoQuantity: number;
-    manualQuantity: number;
-    sources: Set<CartLineSource>;
-    manualLineId: string | null;
+  // Each manual row renders as a distinct response item. The auto total
+  // for the matching (ingredientId, baseUnit) is folded into every manual
+  // row that shares the same key, so a row with both a plan and a manual
+  // contribution shows `source: ['plan', 'manual']`. Plan-only rows (no
+  // matching manual) are emitted as a single auto-only item so the
+  // expected total is still visible.
+  const groupByCategory = new Map<IngredientCategory, CartItem[]>();
+
+  const pushItem = (item: CartItem): void => {
+    const list = groupByCategory.get(item.category) ?? [];
+    list.push(item);
+    groupByCategory.set(item.category, list);
   };
-
-  const byKey = new Map<string, Entry>();
-
-  for (const [key, row] of autoTotals) {
-    const ing = ingredientById.get(row.ingredientId);
-    if (!ing) continue;
-    byKey.set(key, {
-      ingredientId: row.ingredientId,
-      name: ing.name,
-      category: ing.category,
-      unit: row.unit as 'g' | 'ml' | 'pcs',
-      autoQuantity: row.quantity,
-      manualQuantity: 0,
-      sources: new Set<CartLineSource>(['plan']),
-      manualLineId: null,
-    });
-  }
 
   for (const row of manualRows) {
     // Normalise the stored unit (`kg` → `g`, `l` → `ml`) before folding
@@ -169,56 +155,73 @@ export function buildGroupsFromAggregation(
       continue;
     }
     const key = `${row.ingredientId}::${normalized.unit}`;
+    const autoRow = autoTotals.get(key);
+    const autoQuantity = autoRow?.quantity ?? 0;
     const baseQuantity = row.quantity * normalized.factor;
-    const existing = byKey.get(key);
-    if (existing) {
-      existing.manualQuantity += baseQuantity;
-      existing.manualLineId = row.id;
-    } else {
-      const name = ing?.name ?? row.ingredient.name;
-      const category =
-        (ing?.category as IngredientCategory | undefined) ??
-        (row.ingredient.category as IngredientCategory);
-      byKey.set(key, {
-        ingredientId: row.ingredientId,
-        name,
-        category,
-        unit: normalized.unit,
-        autoQuantity: 0,
-        manualQuantity: baseQuantity,
-        sources: new Set<CartLineSource>(['manual']),
-        manualLineId: row.id,
-      });
-    }
-    byKey.get(key)?.sources.add('manual');
+    const name = ing?.name ?? row.ingredient.name;
+    const category =
+      (ing?.category as IngredientCategory | undefined) ??
+      (row.ingredient.category as IngredientCategory);
+    const source: CartLineSource[] = [];
+    if (autoQuantity > 0) source.push('plan');
+    source.push('manual');
+    pushItem({
+      ingredientId: row.ingredientId,
+      name,
+      category,
+      unit: normalized.unit,
+      autoQuantity,
+      manualQuantity: baseQuantity,
+      totalQuantity: autoQuantity + baseQuantity,
+      source,
+      manualLineId: row.id,
+    });
   }
 
-  const grouped = new Map<IngredientCategory, CartItem[]>();
-  for (const entry of byKey.values()) {
-    const total = entry.autoQuantity + entry.manualQuantity;
-    const item: CartItem = {
-      ingredientId: entry.ingredientId,
-      name: entry.name,
-      category: entry.category,
-      autoQuantity: entry.autoQuantity,
-      manualQuantity: entry.manualQuantity,
-      totalQuantity: total,
-      unit: entry.unit,
-      source: Array.from(entry.sources),
-      manualLineId: entry.manualLineId,
-    };
-    const list = grouped.get(entry.category) ?? [];
-    list.push(item);
-    grouped.set(entry.category, list);
+  // Plan-only rows that have no manual counterpart. We emit one entry
+  // per auto total even if there are multiple manual lines for the same
+  // (ingredientId, unit); those manual lines already pushed their own
+  // mixed-source items above.
+  const manualKeys = new Set<string>();
+  for (const row of manualRows) {
+    const normalized = unitToBase(row.unit);
+    if (!normalized) continue;
+    const ing = ingredientById.get(row.ingredientId);
+    if (ing && ing.baseUnit !== normalized.unit) continue;
+    manualKeys.add(`${row.ingredientId}::${normalized.unit}`);
   }
 
-  for (const list of grouped.values()) {
-    list.sort((a, b) => a.name.localeCompare(b.name));
+  for (const [key, row] of autoTotals) {
+    if (manualKeys.has(key)) continue;
+    const ing = ingredientById.get(row.ingredientId);
+    if (!ing) continue;
+    pushItem({
+      ingredientId: row.ingredientId,
+      name: ing.name,
+      category: ing.category,
+      unit: row.unit as 'g' | 'ml' | 'pcs',
+      autoQuantity: row.quantity,
+      manualQuantity: 0,
+      totalQuantity: row.quantity,
+      source: ['plan'],
+      manualLineId: null,
+    });
+  }
+
+  for (const list of groupByCategory.values()) {
+    list.sort((a, b) => {
+      if (a.name !== b.name) return a.name.localeCompare(b.name);
+      // Stable tie-breaker so two distinct manual rows for the same
+      // ingredient/unit keep their insertion order.
+      const aId = a.manualLineId ?? '';
+      const bId = b.manualLineId ?? '';
+      return aId.localeCompare(bId);
+    });
   }
 
   const groups: CartGroup[] = [];
   for (const category of INGREDIENT_CATEGORIES) {
-    const items = grouped.get(category);
+    const items = groupByCategory.get(category);
     if (items && items.length > 0) {
       groups.push({ category, items });
     }

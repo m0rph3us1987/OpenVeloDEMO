@@ -272,18 +272,18 @@ describe('ShoppingCart page', () => {
     ).toBeInTheDocument();
     expect(await screen.findByTestId('cart-group-Meat')).toBeInTheDocument();
     // 250 g is below 1000 → displayed as g.
-    expect(await screen.findByTestId('cart-total-ing-beef-g')).toHaveTextContent(
+    expect(await screen.findByTestId('cart-total-ing-beef-g-line-1')).toHaveTextContent(
       '250.00 g',
     );
     // 1500 g promotes to kg.
-    expect(await screen.findByTestId('cart-total-ing-rice-g')).toHaveTextContent(
+    expect(await screen.findByTestId('cart-total-ing-rice-g-auto')).toHaveTextContent(
       '1.50 kg',
     );
     expect(
-      await screen.findByTestId('source-plan-ing-rice-g'),
+      await screen.findByTestId('source-plan-ing-rice-g-auto'),
     ).toBeInTheDocument();
     expect(
-      await screen.findByTestId('source-manual-ing-beef-g'),
+      await screen.findByTestId('source-manual-ing-beef-g-line-1'),
     ).toBeInTheDocument();
   });
 
@@ -320,9 +320,13 @@ describe('ShoppingCart page', () => {
     await waitFor(() => {
       expect(callLog.some((c) => c.method === 'POST' && c.url.endsWith('/api/cart/lines'))).toBe(true);
     });
-    expect(
-      await screen.findByTestId('cart-total-ing-milk-ml'),
-    ).toHaveTextContent('250.00 ml');
+    // The optimistic manual row uses a unique placeholder id; match by the
+    // data-testid prefix instead of the full id.
+    await waitFor(() => {
+      const totals = screen.queryAllByTestId(/^cart-total-ing-milk-ml-/);
+      expect(totals.length).toBeGreaterThan(0);
+      expect(totals[0]).toHaveTextContent('250.00 ml');
+    });
 
     // Now force the next POST to fail; a banner should show and the cart should
     // not contain a new manual row for "Beans".
@@ -342,7 +346,7 @@ describe('ShoppingCart page', () => {
     const user = userEvent.setup();
 
     // Beef is mixed-source: auto 200 g + manual 50 g (manualLineId = 'line-1').
-    const autoCell = await screen.findByTestId('cart-auto-ing-beef-g');
+    const autoCell = await screen.findByTestId('cart-auto-ing-beef-g-line-1');
     expect(autoCell).toHaveTextContent('200.00 g');
 
     const quantityInput = screen.getByLabelText('Edit quantity for Beef');
@@ -362,10 +366,52 @@ describe('ShoppingCart page', () => {
       );
       expect(patches.length).toBeGreaterThan(0);
     });
-    expect(screen.getByTestId('cart-auto-ing-beef-g')).toHaveTextContent(
+    expect(screen.getByTestId('cart-auto-ing-beef-g-line-1')).toHaveTextContent(
       '200.00 g',
     );
     // The manual editor reflects the updated manual amount.
     expect(quantityInput).toHaveValue(80);
+  });
+
+  it('creates distinct rows when the same ingredient and unit are added twice', async () => {
+    setup();
+    const user = userEvent.setup();
+
+    const picker = await screen.findByLabelText('Search ingredient');
+    const quantity = await screen.findByLabelText('Quantity');
+
+    // First add: Milk 250 ml.
+    await user.type(picker, 'Milk');
+    await user.click(await screen.findByRole('option', { name: 'Milk' }));
+    await user.clear(quantity);
+    await user.type(quantity, '250');
+    await user.click(screen.getByRole('button', { name: 'Add to cart' }));
+
+    // Second add: Milk again at 400 ml. Must create a new row, not merge.
+    await user.type(picker, 'Milk');
+    await user.click(await screen.findByRole('option', { name: 'Milk' }));
+    await user.clear(quantity);
+    await user.type(quantity, '400');
+    await user.click(screen.getByRole('button', { name: 'Add to cart' }));
+
+    // Two distinct POSTs fired and two distinct manual rows render.
+    const posts = callLog.filter(
+      (c) => c.method === 'POST' && c.url.endsWith('/api/cart/lines'),
+    );
+    expect(posts.length).toBeGreaterThanOrEqual(2);
+
+    await waitFor(() => {
+      const dairyGroup = cartState.groups.find((g) => g.category === 'Dairy');
+      expect(dairyGroup?.items.length).toBe(2);
+    });
+    const dairyGroup = cartState.groups.find((g) => g.category === 'Dairy')!;
+    const ids = new Set(
+      dairyGroup.items.map((it) => it.manualLineId).filter(Boolean),
+    );
+    expect(ids.size).toBe(2);
+    const quantities = dairyGroup.items
+      .map((it) => it.manualQuantity)
+      .sort();
+    expect(quantities).toEqual([250, 400]);
   });
 });

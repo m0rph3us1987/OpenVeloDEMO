@@ -173,39 +173,21 @@ export function createCartRouter(prisma: PrismaClient): Router {
       }
       const current = await fetchCurrentWeek(prisma);
       const baseIncrement = data.quantity * normalized.factor;
-      const uniqueWhere = {
-        week_ingredientId_unit_source: {
+      // Each POST creates a distinct manual CartItem row. Repeating the
+      // same (ingredientId, unit) adds a new row instead of incrementing
+      // an existing one; the previous note is preserved on the existing
+      // row and a new line (with its own note) is created. Use PATCH to
+      // edit any single line.
+      const created = await prisma.cartItem.create({
+        data: {
           week: current,
           ingredientId: data.ingredientId,
           unit: normalized.unit,
-          source: 'manual' as const,
+          quantity: baseIncrement,
+          source: 'manual',
+          note: data.note ?? null,
         },
-      };
-      // Atomic increment for the existing row; `create` only on first insert.
-      // `note` is intentionally NOT overwritten on the increment branch —
-      // the original note stays. Use PATCH to change a note.
-      const created = await prisma.$transaction(async (tx) => {
-        const existing = await tx.cartItem.findUnique({
-          where: uniqueWhere,
-        });
-        if (!existing) {
-          return tx.cartItem.create({
-            data: {
-              week: current,
-              ingredientId: data.ingredientId,
-              unit: normalized.unit,
-              quantity: baseIncrement,
-              source: 'manual',
-              note: data.note ?? null,
-            },
-            include: { ingredient: true },
-          });
-        }
-        return tx.cartItem.update({
-          where: { id: existing.id },
-          data: { quantity: { increment: baseIncrement } },
-          include: { ingredient: true },
-        });
+        include: { ingredient: true },
       });
       const record = toLineRecord(created);
       res.status(201).location(`/api/cart/lines/${record.id}`).json(record);

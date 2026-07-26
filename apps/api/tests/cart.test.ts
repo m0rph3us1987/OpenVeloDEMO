@@ -218,7 +218,7 @@ describe('Cart API', () => {
     expect(res.body.note).toBe('updated');
   });
 
-  it('POST /api/cart/lines increments an existing manual row instead of overwriting', async () => {
+  it('POST /api/cart/lines creates a distinct manual row for each request', async () => {
     const ing = await seedIngredient('Beef', 'Meat', 'g');
     const first = await request(app)
       .post('/api/cart/lines')
@@ -230,15 +230,44 @@ describe('Cart API', () => {
       .post('/api/cart/lines')
       .send({ ingredientId: ing, quantity: 300, unit: 'g' });
     expect(second.status).toBe(201);
-    // Same row (same id), quantity is the sum in base units.
-    expect(second.body.id).toBe(first.body.id);
-    expect(second.body.quantity).toBe(500);
+    // Distinct row: a new id, with its own (untouched) quantity.
+    expect(second.body.id).not.toBe(first.body.id);
+    expect(second.body.quantity).toBe(300);
 
-    // The underlying DB row reflects the increment.
-    const stored = await prisma.cartItem.findFirstOrThrow({
+    // Both rows are persisted side-by-side in the DB.
+    const stored = await prisma.cartItem.findMany({
       where: { ingredientId: ing, source: 'manual' },
+      orderBy: { id: 'asc' },
     });
-    expect(stored.quantity).toBe(500);
+    expect(stored).toHaveLength(2);
+    expect(stored.map((r) => r.quantity).sort()).toEqual([200, 300]);
+  });
+
+  it('GET /api/cart renders each manual row as its own item', async () => {
+    const ing = await seedIngredient('Beef', 'Meat', 'g');
+    await request(app)
+      .post('/api/cart/lines')
+      .send({ ingredientId: ing, quantity: 100, unit: 'g' });
+    await request(app)
+      .post('/api/cart/lines')
+      .send({ ingredientId: ing, quantity: 200, unit: 'g' });
+
+    const res = await request(app).get('/api/cart');
+    expect(res.status).toBe(200);
+    const meatGroup = res.body.groups.find(
+      (g: { category: string }) => g.category === 'Meat',
+    );
+    expect(meatGroup).toBeDefined();
+    expect(meatGroup.items).toHaveLength(2);
+    const quantities = meatGroup.items
+      .map((it: { manualQuantity: number }) => it.manualQuantity)
+      .sort();
+    expect(quantities).toEqual([100, 200]);
+    expect(
+      meatGroup.items.every(
+        (it: { manualLineId: string | null }) => typeof it.manualLineId === 'string',
+      ),
+    ).toBe(true);
   });
 
   it('PATCH with quantity only stores the value as a base-unit amount', async () => {

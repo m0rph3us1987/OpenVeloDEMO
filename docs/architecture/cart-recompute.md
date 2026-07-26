@@ -23,7 +23,7 @@ The Plan router calls `recomputeIfCurrentWeek()` after `POST`, `PATCH`, and `DEL
 2. Normalize ingredient quantities into `g`, `ml`, or `pcs`; incompatible unit dimensions are skipped.
 3. For each slot, scale every valid ingredient row by `slot.servings` (default `1`).
 4. Sum `(ingredientId, base unit)` tuples into a `Map`.
-5. Delete every existing `CartItem` row with `week = <week>` and `source = 'auto'`. `source = 'manual'` rows are preserved.
+5. Delete every existing `CartItem` row with `week = <week>` and `source = 'auto'`. `source = 'manual'` rows are preserved (multiple manual rows for the same `(ingredientId, base unit)` are kept side-by-side).
 6. Bulk-insert the aggregated rows with `source = 'auto'`.
 
 The function accepts an optional Prisma `TransactionClient`. When supplied, all reads/writes execute inside the outer `$transaction`; when omitted, the function executes directly against `prisma`.
@@ -43,6 +43,8 @@ GET /api/cart or historical snapshot creation
   └── aggregateCartForWeek → sumMealPlanSlots + manual CartItem rows → grouped response
 
 CartItem source IN ('auto', 'manual') ← enforced by CartItem_source_enum[_update] triggers
+
+GET /api/cart POST /api/cart/lines → one CartItem row per POST (distinct manual lines)
 ```
 
 # Invariants
@@ -50,7 +52,7 @@ CartItem source IN ('auto', 'manual') ← enforced by CartItem_source_enum[_upda
 - `quantity = normalized recipeIngredient.quantity * slot.servings` summed across all slots sharing `(ingredientId, base unit)`.
 - Supported inputs normalize as `kg → g` and `l → ml`; `g`, `ml`, and `pcs` remain unchanged.
 - `source = 'auto'` rows are recomputed wholesale; `source = 'manual'` rows are user-added and are never touched by this function.
-- The unique index `CartItem_week_ingredientId_unit_source_key` keeps duplicate `(week, ingredientId, unit, source)` rows from coexisting.
+- The non-unique index `CartItem_week_ingredientId_idx` keeps manual-row reads cheap. Multiple `source = 'manual'` rows for the same `(week, ingredientId, base unit)` are allowed and are rendered as distinct response items by the cart snapshot pipeline.
 
 # Key Files
 
