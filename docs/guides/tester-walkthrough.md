@@ -70,6 +70,15 @@ If the viewport is short, the sidebar scrolls internally (`overflow-y-auto`) ins
 
 The currently selected nav link receives an `bg-accent text-background` background, while inactive links show a `hover:bg-muted` hover state. Click each link and confirm the active state moves with the selection.
 
+## Browser History
+
+1. Visit `/`, then click `Recipes`, then click `Shopping Cart`.
+2. Use the browser Back button and confirm `Recipes` becomes highlighted and its page is shown.
+3. Use Back again and confirm `Dashboard` becomes highlighted.
+4. Use Forward and confirm `Recipes` becomes highlighted again.
+
+The highlight must always match the URL after browser history navigation; it must not remain on the previously clicked item.
+
 # Keyboard Focus (Focus Rings)
 
 **How to verify:** Press `Tab` repeatedly from the page load. Do **not** click anything with the mouse first.

@@ -10,6 +10,20 @@ timestamp: 2026-07-26T11:53:07Z
 
 `apps/web/src/components/Layout.tsx`. Used as the root route element in `apps/web/src/App.tsx`.
 
+# Integration
+
+`App.tsx` mounts `Layout` for `/`, then renders each matched child route through its `<Outlet />`. The sidebar links use `useLocation()` and `matchPath()` to derive the active state, while the theme button reads and updates [Theme Store](/web/theme-store.md).
+
+# Key Files
+
+| File | Responsibility |
+|------|----------------|
+| `apps/web/src/components/Layout.tsx` | Persistent shell, navigation, active-route styling, and theme control. |
+| `apps/web/src/App.tsx` | Registers the layout and its child routes. |
+| `apps/web/src/store/theme.ts` | Stores the selected theme and applies the document class. |
+| `apps/web/src/components/ui/button.tsx` | Provides the outline button used by the theme control. |
+| `apps/web/tests/layout.test.tsx` | Verifies navigation, active states, focus rings, history navigation, and unmatched routes. |
+
 # Render Tree
 
 ```
@@ -52,11 +66,13 @@ Defined in the `NAV_ITEMS` constant at the top of the file:
 
 # Active Link Styling
 
-`NavLink` receives a function-form `className` that returns:
+The layout compares `location.pathname` with each item using `matchPath()` and applies:
 
 - `bg-accent text-background` for the active route.
 - `hover:bg-muted` for inactive routes.
 - `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background` on every link so keyboard users see a clear focus indicator.
+
+Because the active state follows the router location, browser Back and Forward navigation immediately updates the highlighted link.
 
 # Theme Toggle
 

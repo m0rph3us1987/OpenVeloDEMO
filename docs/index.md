@@ -1,6 +1,5 @@
 ---
 okf_version: "0.1"
-timestamp: 2026-07-26T12:03:52Z
 ---
 
 # Overview
