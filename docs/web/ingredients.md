@@ -3,7 +3,7 @@ type: Guide
 title: Ingredients Page
 description: Architecture and tester workflow for browsing and managing ingredients in the web application.
 tags: [web, ingredients, guide, tester]
-timestamp: 2026-07-26T12:57:49Z
+timestamp: 2026-07-26T19:32:25Z
 ---
 
 # Purpose
@@ -73,6 +73,10 @@ Selecting **Create** with missing fields keeps existing input and displays `Name
 3. Select **Delete** to proceed; the button displays `Deleting...` while pending.
 4. On success, the modal closes and the ingredient disappears after the list refreshes.
 5. Select **Cancel** to close the dialog without deleting.
+
+If the API rejects the delete (for example because the ingredient is referenced by a relation the cascade does not cover), the dialog stays open and the inline alert shows the API error string followed by the stable code in parentheses — for example `Ingredient is referenced by other records (REFERENCED_BY_OTHER_RECORD)`.
+
+When an ingredient is deleted, any recipe rows, cook-log rows, or current/historical shopping-cart lines that reference it are also removed. Recipes themselves and other ingredients are unaffected.
 
 # Architecture
 

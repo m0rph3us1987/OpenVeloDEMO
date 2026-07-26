@@ -3,7 +3,7 @@ type: API
 title: Ingredients API
 description: CRUD endpoints for listing, creating, updating, and deleting persisted ingredients.
 tags: [api, ingredients, express, prisma]
-timestamp: 2026-07-26T12:57:49Z
+timestamp: 2026-07-26T19:32:25Z
 ---
 
 # Overview
@@ -38,7 +38,7 @@ The web [Ingredients Page](/web/ingredients.md) calls these routes through the V
 | `GET` | `/api/ingredients` | None | `200` with `Ingredient[]` | Lists all ingredients sorted by name ascending. |
 | `POST` | `/api/ingredients` | `name`, `category`, `baseUnit` | `201` with `Ingredient` and a `Location` header | Creates an ingredient. All fields are required. |
 | `PATCH` | `/api/ingredients/:id` | Any non-empty subset of `name`, `category`, `baseUnit` | `200` with updated `Ingredient` | Updates only supplied fields. |
-| `DELETE` | `/api/ingredients/:id` | None | `204` with no body | Deletes the ingredient. |
+| `DELETE` | `/api/ingredients/:id` | None | `204` with no body | Deletes the ingredient along with any `RecipeIngredient`, `CookLog` (with this `ingredientId`), and `CartItem` rows that reference it. Recipes and remaining rows are not affected. |
 
 # Validation and Errors
 
@@ -47,6 +47,7 @@ The web [Ingredients Page](/web/ingredients.md) calls these routes through the V
 - An empty `PATCH` body returns `400 INVALID_INPUT`.
 - A duplicate name on create or rename returns `409 NAME_CONFLICT`.
 - Updating or deleting an unknown identifier returns `404 NOT_FOUND`.
+- If a foreign key outside `RecipeIngredient`, `CookLog`, and `CartItem` prevents deletion, the API responds with `409 REFERENCED_BY_OTHER_RECORD`.
 - Unexpected Prisma or server failures pass to Express error handling.
 
 # Wiring

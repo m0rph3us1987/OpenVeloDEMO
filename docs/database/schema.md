@@ -3,7 +3,7 @@ type: Database
 title: Prisma Schema
 description: Core data model for OpenVelo — ingredients, recipes, meal plans, cook logs, live cart items, and frozen cart history.
 tags: [database, prisma, schema]
-timestamp: 2026-07-26T17:28:38Z
+timestamp: 2026-07-26T19:32:25Z
 ---
 
 # Overview
@@ -148,6 +148,18 @@ CartHistory (one frozen snapshot per ISO week; grouped cart data in itemsJson)
 | `CartSnapshot` | `recipeId` set to `NULL` (`updateMany`). | Shopping-cart history is preserved as an anonymous snapshot; only the FK link is severed. |
 
 If a foreign-key constraint still fires (Prisma error code `P2003`) after the steps above, the API responds with `409 REFERENCED_BY_OTHER_RECORD` — see [Recipes API](/api/recipes.md).
+
+# Ingredient Delete Cascade (API layer)
+
+`DELETE /api/ingredients/:id` in `apps/api/src/ingredients.ts` runs a single Prisma `$transaction` to keep the database consistent. The table below summarizes which dependents are removed and which are left intact for each relation:
+
+| Dependent relation | On ingredient delete | Reason |
+|--------------------|----------------------|--------|
+| `RecipeIngredient` | Removed (`deleteMany` issued explicitly by the API). | Recipe rows referencing a now-missing ingredient are meaningless, and `Recipe.ingredients` must remain consistent. Recipes themselves are not deleted — only the join rows that pointed at this ingredient. |
+| `CookLog` | Removed (`deleteMany` for rows with `ingredientId` equal to the deleted ingredient). | Cook history tied to an ingredient variant that no longer exists is meaningless. Cook log rows with `ingredientId = NULL` are untouched. |
+| `CartItem` | Removed (`deleteMany` for the current and historical weeks). | Cart lines for an ingredient that no longer exists cannot be displayed or aggregated. |
+
+If a foreign-key constraint still fires (Prisma error code `P2003`) after the steps above, the API responds with `409 REFERENCED_BY_OTHER_RECORD` — see [Ingredients API](/api/ingredients.md).
 
 # Migrations
 
