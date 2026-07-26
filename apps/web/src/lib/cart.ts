@@ -55,6 +55,19 @@ export const DISPLAY_UNITS: readonly DisplayUnit[] = [
   'pcs',
 ];
 
+export function displayUnitsForBase(
+  base: 'g' | 'ml' | 'pcs',
+): readonly DisplayUnit[] {
+  switch (base) {
+    case 'g':
+      return ['g', 'kg'];
+    case 'ml':
+      return ['ml', 'l'];
+    case 'pcs':
+      return ['pcs'];
+  }
+}
+
 export type CartLineInput = {
   ingredientId: string;
   quantity: number;

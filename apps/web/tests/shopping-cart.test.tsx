@@ -414,4 +414,26 @@ describe('ShoppingCart page', () => {
       .sort();
     expect(quantities).toEqual([250, 400]);
   });
+
+  it('constrains the manual-line unit select to the ingredient base unit', async () => {
+    setup();
+    const user = userEvent.setup();
+    const picker = await screen.findByLabelText('Search ingredient');
+
+    // Beef (g base) → only g and kg allowed.
+    await user.type(picker, 'Beef');
+    await user.click(await screen.findByRole('option', { name: 'Beef' }));
+    const beefUnitSelect = (await screen.findByLabelText('Unit')) as HTMLSelectElement;
+    const beefOptions = Array.from(beefUnitSelect.options).map((o) => o.value);
+    expect(beefOptions).toEqual(['g', 'kg']);
+
+    // Milk (ml base) → only ml and l allowed. Re-select via clearing the
+    // input first; the picker resets `name` so the listbox shows matches.
+    await user.clear(picker);
+    await user.type(picker, 'Milk');
+    await user.click(await screen.findByRole('option', { name: 'Milk' }));
+    const milkUnitSelect = (await screen.findByLabelText('Unit')) as HTMLSelectElement;
+    const milkOptions = Array.from(milkUnitSelect.options).map((o) => o.value);
+    expect(milkOptions).toEqual(['ml', 'l']);
+  });
 });

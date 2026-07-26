@@ -3,7 +3,7 @@ type: Guide
 title: Shopping Cart Page
 description: Tester workflow and technical wiring for weekly plan-derived and manually added shopping-cart items.
 tags: [web, cart, tester, shopping]
-timestamp: 2026-07-26T17:28:38Z
+timestamp: 2026-07-26T18:17:53Z
 ---
 
 # Purpose
@@ -48,12 +48,12 @@ Changing a current-week plan slot triggers the [Cart Recompute](/architecture/ca
 
 1. In `Add manual line`, use `Search ingredient` to select an existing ingredient.
 2. Enter a positive `Quantity`.
-3. Choose `g`, `kg`, `ml`, `l`, or `pcs` from `Unit`.
+3. Choose a `Unit` that matches the selected ingredient's base dimension: `g` or `kg` for a `g`-base ingredient, `ml` or `l` for an `ml`-base ingredient, `pcs` for a `pcs`-base ingredient. The Unit dropdown only offers units compatible with the currently selected ingredient.
 4. Optionally enter a note.
 5. Click `Add to cart`.
 6. Confirm the row appears immediately under the ingredient's category with a `Manual` badge and the total includes the new amount.
 
-The form shows `Pick an ingredient` if no picker option is selected and `Quantity must be greater than 0` for an invalid amount. While saving, the button reads `Saving...`. API failures appear in a dismissible red banner and the optimistic change is rolled back.
+The form shows `Pick an ingredient` if no picker option is selected, `Quantity must be greater than 0` for an invalid amount, and `Unit must match the ingredient's allowed base units (...)` if a non-compatible unit is submitted. While saving, the button reads `Saving...`. API failures appear in a dismissible red banner and the optimistic change is rolled back.
 
 Adding the same ingredient and compatible unit again creates a new manual line that appears as a separate row beneath the previous one. Each manual line has its own quantity, unit, note, and `Delete` button; deleting one line never affects the others.
 

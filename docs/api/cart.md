@@ -3,7 +3,7 @@ type: API
 title: Shopping Cart API
 description: Current and historical weekly cart reads plus current-week manual line management.
 tags: [api, cart, shopping, history]
-timestamp: 2026-07-26T17:28:38Z
+timestamp: 2026-07-26T18:17:53Z
 ---
 
 # Overview
@@ -47,11 +47,11 @@ Each group contains `category` and `items`. Each item contains `ingredientId`, `
 }
 ```
 
-`quantity` must be finite and greater than zero. Supported display units are `g`, `kg`, `ml`, `l`, and `pcs`; `kg` is stored as `g`, and `l` as `ml`. Each successful request creates a new `CartItem` row for the current week, even if other manual rows already exist for the same `(ingredientId, base unit)`. The submitted `note` is stored on the new line; existing lines keep their own notes. Use `PATCH /api/cart/lines/:id` to modify or `DELETE /api/cart/lines/:id` to remove a specific line.
+`quantity` must be finite and greater than zero. Supported display units are `g`, `kg`, `ml`, `l`, and `pcs`; `kg` is stored as `g`, and `l` as `ml`. The submitted `unit` must normalize to the target ingredient's `defaultUnit` base dimension (e.g. `g`/`kg` for a `g`-base ingredient, `ml`/`l` for an `ml`-base ingredient, `pcs` for a `pcs`-base ingredient). Requests that mismatch are rejected with `400 INVALID_INPUT` and a `details` entry on `unit` whose message names the allowed display units; no `CartItem` is persisted. Each successful request creates a new `CartItem` row for the current week, even if other manual rows already exist for the same `(ingredientId, base unit)`. The submitted `note` is stored on the new line; existing lines keep their own notes. Use `PATCH /api/cart/lines/:id` to modify or `DELETE /api/cart/lines/:id` to remove a specific line.
 
 ## Patch manual line
 
-At least one of `quantity`, `unit`, or `note` is required. When quantity and unit are supplied together, the API normalizes the display amount to its base unit. A quantity without a unit is interpreted as an amount in the row's existing base unit.
+At least one of `quantity`, `unit`, or `note` is required. When quantity and unit are supplied together, the API normalizes the display amount to its base unit. A quantity without a unit is interpreted as an amount in the row's existing base unit. A `unit` change must normalize to the underlying ingredient's `defaultUnit`; a mismatched unit is rejected with `400 INVALID_INPUT` and a `details` entry on `unit` whose message names the allowed display units.
 
 # Historical Weeks
 
