@@ -55,7 +55,7 @@ Changing a current-week plan slot triggers the [Cart Recompute](/architecture/ca
 
 The form shows `Pick an ingredient` if no picker option is selected and `Quantity must be greater than 0` for an invalid amount. While saving, the button reads `Saving...`. API failures appear in a dismissible red banner and the optimistic change is rolled back.
 
-Adding the same ingredient and compatible unit again increments its existing manual quantity.
+Adding the same ingredient and compatible unit again creates a new manual line that appears as a separate row beneath the previous one. Each manual line has its own quantity, unit, note, and `Delete` button; deleting one line never affects the others.
 
 ## Edit a manual contribution
 
@@ -63,7 +63,7 @@ Adding the same ingredient and compatible unit again increments its existing man
 2. Change its manual quantity and unit, then click `Save` or leave the input.
 3. Confirm `Manual` and `Total` update while `Auto` remains unchanged.
 
-A mixed-source row displays both `Plan` and `Manual`. Editing it changes only the manual contribution; the planned amount is not editable from this page.
+A mixed-source row displays both `Plan` and `Manual`. Editing it changes only the manual contribution; the planned amount is not editable from this page. When multiple manual lines exist for the same `(ingredientId, unit)`, each line is rendered as a separate row that carries the matching `autoQuantity` alongside its own `manualQuantity`, and the two rows have independent edit controls and `Delete` buttons.
 
 ## Delete a manual contribution
 

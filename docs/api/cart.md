@@ -19,7 +19,7 @@ Current-week totals are calculated from [meal-plan slots](/api/plan.md) and manu
 | `GET` | `/api/cart` | Return the current ISO week's live cart. | `200` cart response. |
 | `GET` | `/api/cart/weeks` | List past weeks that have plan, manual-cart, or frozen history data. | `200` summary array, newest first. |
 | `GET` | `/api/cart/weeks/:weekKey` | Return a current or past weekly cart. A past week is frozen on first read. | `200` cart response. |
-| `POST` | `/api/cart/lines` | Add a manual line to the current week or increment an existing matching manual line. | `201` line record and `Location` header. |
+| `POST` | `/api/cart/lines` | Add a manual line to the current week. Each successful request creates a distinct manual row. | `201` line record and `Location` header. |
 | `PATCH` | `/api/cart/lines/:id` | Change a current-week manual line's quantity, unit, or note. | `200` line record. |
 | `DELETE` | `/api/cart/lines/:id` | Remove a current-week manual line. | `204`. |
 
@@ -34,7 +34,7 @@ Current-week totals are calculated from [meal-plan slots](/api/plan.md) and manu
 | `dateRange` | object | Inclusive `start` and `end` dates in `YYYY-MM-DD` format. |
 | `groups` | array | Non-empty category groups in shared ingredient-category order. |
 
-Each group contains `category` and `items`. Each item contains `ingredientId`, `name`, `category`, `autoQuantity`, `manualQuantity`, `totalQuantity`, base `unit`, `source`, and `manualLineId`. `source` can contain `plan`, `manual`, or both. `manualLineId` is present only when the merged item has an editable manual contribution.
+Each group contains `category` and `items`. Each item contains `ingredientId`, `name`, `category`, `autoQuantity`, `manualQuantity`, `totalQuantity`, base `unit`, `source`, and `manualLineId`. `source` can contain `plan`, `manual`, or both. `manualLineId` is present for every manual line and identifies a single editable contribution. Repeated manual additions for the same `(ingredientId, unit)` produce distinct response items, each with its own `manualLineId`.
 
 ## Create manual line
 
@@ -47,7 +47,7 @@ Each group contains `category` and `items`. Each item contains `ingredientId`, `
 }
 ```
 
-`quantity` must be finite and greater than zero. Supported display units are `g`, `kg`, `ml`, `l`, and `pcs`; `kg` is stored as `g`, and `l` as `ml`. Repeated creates for the same current-week `(ingredientId, base unit, manual)` tuple increment its quantity rather than creating another row. The original note is retained on increment and can be changed with `PATCH`.
+`quantity` must be finite and greater than zero. Supported display units are `g`, `kg`, `ml`, `l`, and `pcs`; `kg` is stored as `g`, and `l` as `ml`. Each successful request creates a new `CartItem` row for the current week, even if other manual rows already exist for the same `(ingredientId, base unit)`. The submitted `note` is stored on the new line; existing lines keep their own notes. Use `PATCH /api/cart/lines/:id` to modify or `DELETE /api/cart/lines/:id` to remove a specific line.
 
 ## Patch manual line
 
