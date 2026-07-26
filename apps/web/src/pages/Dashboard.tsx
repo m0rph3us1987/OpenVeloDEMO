@@ -43,7 +43,6 @@ export function Dashboard(): JSX.Element {
   const [editing, setEditing] = useState<PlanSlotRecord | null>(null);
   const [deleting, setDeleting] = useState<PlanSlotRecord | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [cookedTracker, setCookedTracker] = useState<Set<string>>(new Set());
 
   const planQuery = useQuery({
     queryKey: ['plan', activeWeek],
@@ -51,8 +50,8 @@ export function Dashboard(): JSX.Element {
   });
 
   const statsQuery = useQuery({
-    queryKey: ['plan-stats', activeWeek],
-    queryFn: () => fetchStats(activeWeek),
+    queryKey: ['stats'],
+    queryFn: () => fetchStats(),
   });
 
   const recipesQuery = useQuery({
@@ -64,7 +63,8 @@ export function Dashboard(): JSX.Element {
     mutationFn: (id: string) => deletePlanSlot(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plan', activeWeek] });
-      queryClient.invalidateQueries({ queryKey: ['plan-stats', activeWeek] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
       setDeleting(null);
       setDeleteError(null);
     },
@@ -92,7 +92,8 @@ export function Dashboard(): JSX.Element {
 
   const handleSlotChanged = (): void => {
     queryClient.invalidateQueries({ queryKey: ['plan', activeWeek] });
-    queryClient.invalidateQueries({ queryKey: ['plan-stats', activeWeek] });
+    queryClient.invalidateQueries({ queryKey: ['stats'] });
+    queryClient.invalidateQueries({ queryKey: ['recipes'] });
     if (activeWeek === serverNowWeek) {
       queryClient.invalidateQueries({ queryKey: ['cart', serverNowWeek] });
     }
@@ -125,15 +126,6 @@ export function Dashboard(): JSX.Element {
       return;
     }
     remove.mutate(deleting.id);
-  };
-
-  const markCookedLocally = (slotId: string): void => {
-    const todayKey = new Date().toISOString().slice(0, 10);
-    setCookedTracker((previous) => {
-      const next = new Set(previous);
-      next.add(`${slotId}:${todayKey}`);
-      return next;
-    });
   };
 
   return (
@@ -210,12 +202,6 @@ export function Dashboard(): JSX.Element {
             return cloneRecipes(recipes);
           }}
           setRecipesCache={cloneRecipes}
-          cookedKey={(slotId: string) => {
-            const todayKey = new Date().toISOString().slice(0, 10);
-            const key = `${slotId}:${todayKey}`;
-            return cookedTracker.has(key) ? key : `${slotId}:none`;
-          }}
-          markCookedLocally={markCookedLocally}
         />
       )}
 
@@ -311,10 +297,11 @@ export function Dashboard(): JSX.Element {
 
 function StatsTable(props: { stats: StatsResponse; onError: (msg: string) => void }): JSX.Element {
   const { stats, onError } = props;
+  void onError;
   if (stats.items.length === 0) {
     return (
       <p className="text-sm opacity-80" data-testid="empty-stats">
-        Nothing cooked yet this week.
+        No recipes yet.
       </p>
     );
   }
@@ -329,10 +316,10 @@ function StatsTable(props: { stats: StatsResponse; onError: (msg: string) => voi
       </thead>
       <tbody>
         {stats.items.map((item) => (
-          <tr key={item.recipeId} className="border-t border-muted">
+          <tr key={item.recipeId} className="border-t border-muted" data-testid="stats-row">
             <td className="px-2 py-1">{item.recipeName}</td>
-            <td className="px-2 py-1">{item.count}</td>
-            <td className="px-2 py-1">
+            <td className="px-2 py-1" data-testid={`stats-count-${item.recipeId}`}>{item.count}</td>
+            <td className="px-2 py-1" data-testid={`stats-last-${item.recipeId}`}>
               {item.lastCookedAt
                 ? new Date(item.lastCookedAt).toLocaleDateString()
                 : '—'}

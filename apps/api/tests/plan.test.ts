@@ -186,10 +186,38 @@ describe('Plan API', () => {
     expect(cookAgain.body.cookedCount).toBe(2);
   });
 
-  it('POST /api/plan/:id/cooked on unknown id returns 404', async () => {
+  it('POST /api/plan/:id/cooked persists a distinct CookLog row per click', async () => {
+    const recipe = await prisma.recipe.create({ data: { title: 'Toast' } });
+    const week = '2026-W30';
+    const created = await request(app)
+      .post('/api/plan')
+      .send({ week, day: 1, slot: 'Breakfast', recipeId: recipe.id });
+
+    expect(await prisma.cookLog.count({ where: { mealPlanSlotId: created.body.id } })).toBe(0);
+
+    await request(app).post(`/api/plan/${created.body.id}/cooked`);
+    await request(app).post(`/api/plan/${created.body.id}/cooked`);
+    await request(app).post(`/api/plan/${created.body.id}/cooked`);
+
+    const logs = await prisma.cookLog.findMany({
+      where: { mealPlanSlotId: created.body.id },
+      orderBy: { cookedAt: 'asc' },
+    });
+    const ids = logs.map((log) => log.id);
+    expect(logs).toHaveLength(3);
+    expect(new Set(ids).size).toBe(3);
+    for (const log of logs) {
+      expect(log.recipeId).toBe(recipe.id);
+      expect(log.cookedAt).toBeInstanceOf(Date);
+    }
+  });
+
+  it('POST /api/plan/:id/cooked on unknown id returns 404 and creates no row', async () => {
+    const before = await prisma.cookLog.count();
     const res = await request(app).post('/api/plan/does-not-exist/cooked');
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('NOT_FOUND');
+    expect(await prisma.cookLog.count()).toBe(before);
   });
 
   it('DELETE /api/plan/:id removes the slot and returns 204', async () => {
@@ -236,6 +264,49 @@ describe('Plan API', () => {
       lastCookedAt: expect.any(String),
     });
     expect(res.body.items[1].count).toBe(0);
+  });
+
+  it('GET /api/stats returns every recipe with its lifetime count and last cooked date', async () => {
+    const saltId = await seedIngredient('Salt');
+    const milkId = await seedIngredient('Milk');
+    const cooked = await createRecipeWithIngredients('Cooked', [
+      { ingredientId: saltId, quantity: 1, unit: 'g' },
+    ]);
+    const fresh = await createRecipeWithIngredients('Fresh', [
+      { ingredientId: milkId, quantity: 1, unit: 'ml' },
+    ]);
+
+    const week = '2026-W30';
+    const slot = await request(app)
+      .post('/api/plan')
+      .send({ week, day: 1, slot: 'Lunch', recipeId: cooked });
+    await request(app).post(`/api/plan/${slot.body.id}/cooked`);
+    await request(app).post(`/api/plan/${slot.body.id}/cooked`);
+
+    const res = await request(app).get('/api/stats');
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(2);
+
+    const cookedItem = res.body.items.find(
+      (item: { recipeId: string; recipeName: string; count: number; lastCookedAt: string | null }) =>
+        item.recipeId === cooked,
+    );
+    expect(cookedItem).toEqual({
+      recipeId: cooked,
+      recipeName: 'Cooked',
+      count: 2,
+      lastCookedAt: expect.any(String),
+    });
+    const freshItem = res.body.items.find(
+      (item: { recipeId: string; recipeName: string; count: number; lastCookedAt: string | null }) =>
+        item.recipeId === fresh,
+    );
+    expect(freshItem).toEqual({
+      recipeId: fresh,
+      recipeName: 'Fresh',
+      count: 0,
+      lastCookedAt: null,
+    });
   });
 
   it('GET /api/plan accepts current week via week query param', async () => {

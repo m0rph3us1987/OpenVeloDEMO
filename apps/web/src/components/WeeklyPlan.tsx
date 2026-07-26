@@ -20,8 +20,6 @@ export type WeeklyPlanProps = {
   onError: (message: string) => void;
   refreshRecipes: () => Promise<Awaited<ReturnType<typeof fetchRecipes>>>;
   setRecipesCache: (recipes: Awaited<ReturnType<typeof fetchRecipes>>) => void;
-  cookedKey: (slotId: string) => string;
-  markCookedLocally: (slotId: string) => void;
 };
 
 function dateForColumn(weekStart: string, day: number): string {
@@ -52,8 +50,6 @@ export function WeeklyPlan(props: WeeklyPlanProps): JSX.Element {
     onError,
     refreshRecipes,
     setRecipesCache,
-    cookedKey,
-    markCookedLocally,
   } = props;
   const headingId = useId();
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
@@ -78,11 +74,6 @@ export function WeeklyPlan(props: WeeklyPlanProps): JSX.Element {
     if (busyIds.has(slot.id)) {
       return;
     }
-    const todayKey = new Date().toISOString().slice(0, 10);
-    if (cookedKey(slot.id) === `${slot.id}:${todayKey}`) {
-      onError('You already marked this slot as cooked today.');
-      return;
-    }
     setBusyIds((previous) => {
       const next = new Set(previous);
       next.add(slot.id);
@@ -90,10 +81,8 @@ export function WeeklyPlan(props: WeeklyPlanProps): JSX.Element {
     });
     try {
       refreshRecipes().then(setRecipesCache).catch(() => undefined);
-      const updated = await markSlotCooked(slot.id);
-      markCookedLocally(slot.id);
+      await markSlotCooked(slot.id);
       onSlotChanged();
-      console.info(`[plan] cooked ${updated.id}, count=${updated.cookedCount}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Request failed';
       onError(message);
@@ -147,8 +136,7 @@ export function WeeklyPlan(props: WeeklyPlanProps): JSX.Element {
               </header>
               <ul className="mt-2 space-y-2" aria-label={`Planned meals for ${DAY_LABELS[col.day - 1] ?? ''}`}>
                 {slotList.map((slot) => {
-                  const todayKey = new Date().toISOString().slice(0, 10);
-                  const cookedToday = cookedKey(slot.id) === `${slot.id}:${todayKey}`;
+                  const busy = busyIds.has(slot.id);
                   return (
                     <li
                       key={slot.id}
@@ -177,12 +165,12 @@ export function WeeklyPlan(props: WeeklyPlanProps): JSX.Element {
                         <Button
                           type="button"
                           size="sm"
-                          variant={cookedToday ? 'outline' : 'default'}
-                          disabled={cookedToday || busyIds.has(slot.id)}
+                          variant="default"
+                          disabled={busy}
                           aria-label={`I cooked ${slot.recipeName}`}
                           onClick={() => handleCooked(slot)}
                         >
-                          {cookedToday ? 'Cooked ✓' : 'I cooked this'}
+                          {busy ? 'Logging…' : 'I cooked this'}
                         </Button>
                         <span className="text-xs opacity-70" aria-label="Times cooked">
                           {slot.cookedCount}× cooked

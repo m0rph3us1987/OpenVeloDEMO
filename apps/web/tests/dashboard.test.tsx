@@ -42,11 +42,9 @@ type StatsItem = {
 };
 
 type StatsResponse = {
-  week: string;
   items: StatsItem[];
 };
 
-const TODAY_ISO = '2026-07-29';
 const CURRENT_WEEK = '2026-W31';
 const WEEK_START = '2026-07-27';
 const WEEK_END = '2026-08-02';
@@ -69,6 +67,7 @@ const recipesData: Recipe[] = [
 let planState: PlanResponse;
 let statsState: StatsResponse;
 let callLog: Array<{ url: string; method: string; body?: unknown }>;
+let cookShouldFail: boolean;
 
 function resetState(): void {
   planState = {
@@ -89,12 +88,13 @@ function resetState(): void {
     ],
   };
   statsState = {
-    week: CURRENT_WEEK,
     items: [
       { recipeId: 'rec-pasta', recipeName: 'Pasta', count: 1, lastCookedAt: '2026-07-29T12:00:00.000Z' },
+      { recipeId: 'rec-soup', recipeName: 'Soup', count: 0, lastCookedAt: null },
     ],
   };
   callLog = [];
+  cookShouldFail = false;
 }
 
 function makeFetch(): typeof fetch {
@@ -104,7 +104,7 @@ function makeFetch(): typeof fetch {
     const bodyText = typeof init?.body === 'string' ? init.body : undefined;
     callLog.push({ url, method, body: bodyText ? JSON.parse(bodyText) : undefined });
 
-    if (url.includes('/api/plan/stats') && method === 'GET') {
+    if (url.endsWith('/api/stats') && method === 'GET') {
       return new Response(JSON.stringify(statsState), { status: 200 });
     }
     if (url.includes('/api/plan?') && method === 'GET') {
@@ -116,6 +116,12 @@ function makeFetch(): typeof fetch {
 
     const cookedMatch = url.match(/\/api\/plan\/([^/]+)\/cooked$/);
     if (cookedMatch && method === 'POST') {
+      if (cookShouldFail) {
+        return new Response(
+          JSON.stringify({ error: 'Cook failed', code: 'COOK_FAILED' }),
+          { status: 500 },
+        );
+      }
       const id = cookedMatch[1];
       const slot = planState.slots.find((s) => s.id === id);
       if (!slot) {
@@ -123,9 +129,10 @@ function makeFetch(): typeof fetch {
       }
       slot.cookedCount += 1;
       const existing = statsState.items.find((it) => it.recipeId === slot.recipeId);
+      const newTimestamp = new Date().toISOString();
       if (existing) {
         existing.count += 1;
-        existing.lastCookedAt = '2026-07-29T12:00:00.000Z';
+        existing.lastCookedAt = newTimestamp;
       } else {
         statsState.items = [
           ...statsState.items,
@@ -133,9 +140,13 @@ function makeFetch(): typeof fetch {
             recipeId: slot.recipeId,
             recipeName: slot.recipeName,
             count: 1,
-            lastCookedAt: '2026-07-29T12:00:00.000Z',
+            lastCookedAt: newTimestamp,
           },
         ];
+      }
+      const recipe = recipesData.find((r) => r.id === slot.recipeId);
+      if (recipe) {
+        recipe.timesCooked = (recipe.timesCooked ?? 0) + 1;
       }
       return new Response(JSON.stringify(slot), { status: 200 });
     }
@@ -225,9 +236,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// keep references so the unused warning is silenced
-void TODAY_ISO;
-
 describe('Dashboard page', () => {
   it('renders the weekly plan and cooked summary for the current week', async () => {
     setup();
@@ -240,6 +248,72 @@ describe('Dashboard page', () => {
     expect(
       await screen.findByRole('button', { name: 'I cooked Pasta' }),
     ).toBeInTheDocument();
+  });
+
+  it('renders every recipe in the stats table including never-cooked rows', async () => {
+    setup();
+    const table = await screen.findByTestId('stats-table');
+    expect(within(table).getByText('Pasta')).toBeInTheDocument();
+    expect(within(table).getByText('Soup')).toBeInTheDocument();
+    expect(within(table).getByTestId('stats-count-rec-soup')).toHaveTextContent('0');
+    expect(within(table).getByTestId('stats-last-rec-soup')).toHaveTextContent('—');
+  });
+
+  it('shows an accessible I cooked this button for every planned slot', async () => {
+    setup();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /Add planned meal to Monday/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add planned meal (Monday)' });
+    await user.selectOptions(within(dialog).getByLabelText('Slot'), 'Dinner');
+    await user.selectOptions(within(dialog).getByLabelText('Recipe'), 'rec-soup');
+    await user.click(within(dialog).getByRole('button', { name: 'Add' }));
+    expect(await screen.findByRole('button', { name: 'I cooked Soup' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'I cooked Pasta' })).toBeEnabled();
+  });
+
+  it('issues a fresh POST per click and refreshes the count and last cooked date', async () => {
+    setup();
+    const user = userEvent.setup();
+    const cook = await screen.findByRole('button', { name: 'I cooked Pasta' });
+    await user.click(cook);
+
+    await waitFor(() => {
+      const table = screen.getByTestId('stats-table');
+      expect(within(table).getByTestId('stats-count-rec-pasta')).toHaveTextContent('2');
+    });
+
+    const cookAgain = await screen.findByRole('button', { name: 'I cooked Pasta' });
+    await user.click(cookAgain);
+
+    await waitFor(() => {
+      const table = screen.getByTestId('stats-table');
+      expect(within(table).getByTestId('stats-count-rec-pasta')).toHaveTextContent('3');
+    });
+
+    const cooks = callLog.filter((c) => c.method === 'POST' && c.url.endsWith('/cooked'));
+    expect(cooks).toHaveLength(2);
+  });
+
+  it('surfaces a failed cook POST in the banner and leaves the count unchanged', async () => {
+    cookShouldFail = true;
+    setup();
+    const user = userEvent.setup();
+    const cook = await screen.findByRole('button', { name: 'I cooked Pasta' });
+    await user.click(cook);
+
+    const matches = await screen.findAllByText('Cook failed (COOK_FAILED)');
+    expect(matches.length).toBeGreaterThan(0);
+
+    await waitFor(() => {
+      const table = screen.getByTestId('stats-table');
+      expect(within(table).getByTestId('stats-count-rec-pasta')).toHaveTextContent('1');
+    });
+
+    const cookbookCallCount = callLog.filter(
+      (c) => c.method === 'POST' && c.url.endsWith('/cooked'),
+    ).length;
+    expect(cookbookCallCount).toBe(1);
+    expect(await screen.findByRole('button', { name: 'I cooked Pasta' })).toBeEnabled();
   });
 
   it('opens the add dialog when the Add button is clicked and posts a new slot', async () => {
@@ -256,17 +330,6 @@ describe('Dashboard page', () => {
       expect(posts).toHaveLength(1);
       expect(posts[0].body).toMatchObject({ day: 1, slot: 'Dinner', recipeId: 'rec-soup' });
     });
-  });
-
-  it('marks a slot as cooked and shows the confirmation state', async () => {
-    setup();
-    const user = userEvent.setup();
-    const cook = await screen.findByRole('button', { name: 'I cooked Pasta' });
-    await user.click(cook);
-    expect(await screen.findByRole('button', { name: 'I cooked Pasta' })).toBeDisabled();
-    expect(screen.getByText('Cooked ✓')).toBeInTheDocument();
-    const cooks = callLog.filter((c) => c.method === 'POST' && c.url.endsWith('/cooked'));
-    expect(cooks).toHaveLength(1);
   });
 
   it('opens the confirm dialog when delete is clicked and removes the slot', async () => {
@@ -317,7 +380,7 @@ describe('Dashboard page', () => {
       const url = typeof input === 'string' ? input : input.toString();
       const method = (init?.method ?? 'GET').toUpperCase();
       callLog.push({ url, method });
-      if (url.includes('/api/plan/stats') && method === 'GET') {
+      if (url.endsWith('/api/stats') && method === 'GET') {
         return new Response(JSON.stringify(statsState), { status: 200 });
       }
       if (url.includes('/api/plan?') && method === 'GET') {
