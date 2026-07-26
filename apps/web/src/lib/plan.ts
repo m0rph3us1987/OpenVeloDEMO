@@ -137,7 +137,6 @@ export type StatsItem = {
 };
 
 export type StatsResponse = {
-  week: string;
   items: StatsItem[];
 };
 
@@ -181,8 +180,8 @@ export function fetchPlan(week: string): Promise<PlanResponse> {
   return api<PlanResponse>(`/api/plan?week=${encodeURIComponent(week)}`);
 }
 
-export function fetchStats(week: string): Promise<StatsResponse> {
-  return api<StatsResponse>(`/api/plan/stats?week=${encodeURIComponent(week)}`);
+export function fetchStats(): Promise<StatsResponse> {
+  return api<StatsResponse>('/api/stats');
 }
 
 export function fetchRecipes(): Promise<RecipeSummary[]> {

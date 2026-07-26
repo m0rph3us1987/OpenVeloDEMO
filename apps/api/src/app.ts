@@ -3,7 +3,7 @@ import express, { type Express } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { createIngredientsRouter } from './ingredients.js';
 import { createRecipesRouter } from './recipes.js';
-import { createPlanRouter } from './plan.js';
+import { createPlanRouter, createStatsRouter } from './plan.js';
 
 export function createApp(prisma?: PrismaClient): Express {
   const app = express();
@@ -25,6 +25,7 @@ export function createApp(prisma?: PrismaClient): Express {
   app.use('/api/ingredients', createIngredientsRouter((client as PrismaClient)));
   app.use('/api/recipes', createRecipesRouter((client as PrismaClient)));
   app.use('/api/plan', createPlanRouter((client as PrismaClient)));
+  app.use('/api/stats', createStatsRouter((client as PrismaClient)));
 
   return app;
 }

@@ -96,10 +96,27 @@ export type PlanSlotRecord = {
   cookedCount: number;
 };
 
+export type StatsItem = {
+  recipeId: string;
+  recipeName: string;
+  count: number;
+  lastCookedAt: string | null;
+};
+
+export type StatsResponse = {
+  items: StatsItem[];
+};
+
 type PlanSlotRow = Prisma.MealPlanSlotGetPayload<{
   include: {
     recipe: true;
     _count: { select: { cookLogs: true } };
+  };
+}>;
+
+type RecipeWithCookLogs = Prisma.RecipeGetPayload<{
+  include: {
+    cookLogs: { select: { cookedAt: true } };
   };
 }>;
 
@@ -114,6 +131,41 @@ function mapSlot(row: PlanSlotRow): PlanSlotRecord {
     notes: row.notes ?? null,
     cookedCount: row._count.cookLogs,
   };
+}
+
+/**
+ * Build the lifetime cook statistics for every recipe, including
+ * never-cooked recipes. The returned array is sorted by count descending,
+ * then by recipe name ascending, then by id ascending to keep the order
+ * stable across calls.
+ */
+export function mapCookLogStats(recipes: RecipeWithCookLogs[]): StatsItem[] {
+  return recipes
+    .map((recipe) => {
+      const lastLog = recipe.cookLogs
+        .map((log) => log.cookedAt)
+        .sort((a, b) => b.getTime() - a.getTime())[0];
+      return {
+        recipeId: recipe.id,
+        recipeName: recipe.title,
+        count: recipe.cookLogs.length,
+        lastCookedAt: lastLog ? lastLog.toISOString() : null,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.count - a.count ||
+        a.recipeName.localeCompare(b.recipeName) ||
+        a.recipeId.localeCompare(b.recipeId),
+    );
+}
+
+async function loadLifetimeStats(prisma: PrismaClient): Promise<StatsResponse> {
+  const recipes = await prisma.recipe.findMany({
+    orderBy: { title: 'asc' },
+    include: { cookLogs: { select: { cookedAt: true } } },
+  });
+  return { items: mapCookLogStats(recipes) };
 }
 
 async function ensureRecipeExists(
@@ -179,36 +231,12 @@ export function createPlanRouter(prisma: PrismaClient): Router {
         return;
       }
       const range = resolveWeek(parsed.data.week);
-
-      const recipesInWeek = await prisma.recipe.findMany({
+      const recipes = await prisma.recipe.findMany({
         where: { mealSlots: { some: { week: range.week } } },
         orderBy: { title: 'asc' },
-        include: {
-          cookLogs: {
-            orderBy: { cookedAt: 'desc' },
-            where: { mealPlanSlot: { week: range.week } },
-          },
-        },
+        include: { cookLogs: { select: { cookedAt: true } } },
       });
-
-      const items = recipesInWeek
-        .map((recipe) => {
-          const lastLog = recipe.cookLogs[0];
-          return {
-            recipeId: recipe.id,
-            recipeName: recipe.title,
-            count: recipe.cookLogs.length,
-            lastCookedAt: lastLog ? lastLog.cookedAt.toISOString() : null,
-          };
-        })
-        .sort(
-          (a, b) =>
-            b.count - a.count ||
-            a.recipeName.localeCompare(b.recipeName) ||
-            a.recipeId.localeCompare(b.recipeId),
-        );
-
-      res.status(200).json({ week: range.week, items });
+      res.status(200).json({ week: range.week, items: mapCookLogStats(recipes) });
     } catch (err) {
       if (err instanceof HttpError) {
         sendError(res, err);
@@ -388,6 +416,25 @@ export function createPlanRouter(prisma: PrismaClient): Router {
         });
       });
       res.status(200).json(mapSlot(updated));
+    } catch (err) {
+      if (err instanceof HttpError) {
+        sendError(res, err);
+        return;
+      }
+      next(err);
+    }
+  });
+
+  return router;
+}
+
+export function createStatsRouter(prisma: PrismaClient): Router {
+  const router = Router();
+
+  router.get('/', async (_req, res, next) => {
+    try {
+      const stats = await loadLifetimeStats(prisma);
+      res.status(200).json(stats);
     } catch (err) {
       if (err instanceof HttpError) {
         sendError(res, err);

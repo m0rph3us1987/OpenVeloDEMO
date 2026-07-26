@@ -4,7 +4,7 @@ okf_version: "0.1"
 
 # Overview
 
-OpenVelo is a meal-planning application composed of an Express API, a React web client, and a shared types package. These documents describe the architecture, data model, and user-facing flows for the current build. The Recipes API performs a transactional cleanup of `MealPlanSlot`, `CookLog`, `CartSnapshot`, and `RecipeIngredient` dependents when a recipe is deleted, returning `409 REFERENCED_BY_OTHER_RECORD` on leftover foreign-key conflicts. The web Recipes Page renders API error messages as `<error> (<code>)` so testers can see the stable error code inline. The Dashboard now drives the [Plan API](/api/plan.md) for adding, editing, marking cooked, and deleting weekly planned slots; the [Cart Recompute](/architecture/cart-recompute.md) pipeline re-aggregates the auto `CartItem` rows for the active ISO week after every plan mutation.
+OpenVelo is a meal-planning application composed of an Express API, a React web client, and a shared types package. These documents describe the architecture, data model, and user-facing flows for the current build. The Recipes API performs a transactional cleanup of `MealPlanSlot`, `CookLog`, `CartSnapshot`, and `RecipeIngredient` dependents when a recipe is deleted, returning `409 REFERENCED_BY_OTHER_RECORD` on leftover foreign-key conflicts. The web Recipes Page renders API error messages as `<error> (<code>)` so testers can see the stable error code inline. The Dashboard now drives the [Plan API](/api/plan.md) for adding, editing, marking cooked, and deleting weekly planned slots, and consumes the global `GET /api/stats` summary for the per-recipe cooking overview; the [Cart Recompute](/architecture/cart-recompute.md) pipeline re-aggregates the auto `CartItem` rows for the active ISO week after every plan mutation.
 
 # Architecture
 
@@ -19,7 +19,7 @@ OpenVelo is a meal-planning application composed of an Express API, a React web 
 * [Health Endpoint](/api/health.md) - `GET /api/health` liveness check.
 * [Ingredients API](/api/ingredients.md) - Ingredient listing, creation, updates, deletion, validation, and error contracts.
 * [Recipes API](/api/recipes.md) - Recipe listing, creation, updates, deletion, ingredient rows, and error contracts.
-* [Plan API](/api/plan.md) - Weekly meal-plan CRUD, stats, and the `/cooked` endpoint.
+* [Plan API](/api/plan.md) - Weekly meal-plan CRUD, the week-scoped `/api/plan/stats` and global `/api/stats` summaries, and the `/cooked` endpoint.
 
 # Database
 

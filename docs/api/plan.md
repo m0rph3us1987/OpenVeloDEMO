@@ -3,7 +3,7 @@ type: API
 title: Plan API
 description: Endpoints for managing the weekly meal-plan slots, viewing per-recipe cooking stats, and marking planned slots as cooked.
 tags: [api, plan, meal-plan, express, prisma]
-timestamp: 2026-07-26T15:59:39Z
+timestamp: 2026-07-26T16:48:00Z
 ---
 
 # Overview
@@ -38,10 +38,14 @@ The web [Dashboard Page](/web/dashboard.md) consumes these endpoints through the
 
 ## StatsResponse
 
+Returned by `GET /api/stats`. The endpoint aggregates every recipe in the
+database — including those that have never been cooked — into a single
+dashboard summary. Rows are sorted by `count` desc, then `recipeName` asc,
+then `recipeId` asc.
+
 | Field | Type | Description |
 |-------|------|-------------|
-| `week` | `string` | ISO week label. |
-| `items` | `StatsItem[]` | One row per recipe with at least one `MealPlanSlot` in the week. Sorted by count desc, then name asc, then id asc. |
+| `items` | `StatsItem[]` | One row per recipe (never-cooked recipes included). |
 
 ### StatsItem
 
@@ -49,8 +53,12 @@ The web [Dashboard Page](/web/dashboard.md) consumes these endpoints through the
 |-------|------|-------------|
 | `recipeId` | `string` | Recipe identifier. |
 | `recipeName` | `string` | Recipe title. |
-| `count` | `number` | Number of `CookLog` rows tied to slots of this recipe in the week. |
-| `lastCookedAt` | `string \| null` | ISO timestamp of the most recent cook log, or `null`. |
+| `count` | `number` | Total number of `CookLog` rows for this recipe across history. `0` when it has never been cooked. |
+| `lastCookedAt` | `string \| null` | ISO timestamp of the most recent cook log, or `null` for never-cooked recipes. |
+
+The week-scoped `GET /api/plan/stats` (optional `?week=YYYY-Www`) is still
+exposed for the planned-week summary and only includes recipes that have a
+`MealPlanSlot` in that week.
 
 ## Error response
 
@@ -65,11 +73,12 @@ The web [Dashboard Page](/web/dashboard.md) consumes these endpoints through the
 | Method | Path | Body | Success | Notes |
 |--------|------|------|---------|-------|
 | `GET` | `/api/plan` | — | `200` with `PlanResponse` | Optional `?week=YYYY-Www`; defaults to the current ISO week. |
-| `GET` | `/api/plan/stats` | — | `200` with `StatsResponse` | Same `?week` semantics as `/api/plan`. |
+| `GET` | `/api/plan/stats` | — | `200` with week-scoped `StatsResponse` (deprecated alias — prefer `/api/stats`) | Same `?week` semantics as `/api/plan`. |
+| `GET` | `/api/stats` | — | `200` with global `StatsResponse` (every recipe, including never-cooked) | Powers the Dashboard summary. |
 | `POST` | `/api/plan` | `{ day, slot, recipeId, notes?, week? }` | `201` with `PlanSlotRecord` and a `Location` header pointing at `/api/plan/:id` | `day` is 1–7, `slot` is one of the four meal-slot enums. |
 | `PATCH` | `/api/plan/:id` | Any non-empty subset of `{ day?, slot?, recipeId?, notes? }` | `200` with `PlanSlotRecord` | `notes` may be `null` to clear. |
 | `DELETE` | `/api/plan/:id` | — | `204` empty | Triggers cart recompute when the deleted slot's week is the current week. |
-| `POST` | `/api/plan/:id/cooked` | — | `200` with `PlanSlotRecord` | Creates a `CookLog` row tied to the slot. Increments `cookedCount`. |
+| `POST` | `/api/plan/:id/cooked` | — | `200` with `PlanSlotRecord` | Creates a fresh `CookLog` row tied to the slot and increments its `cookedCount`. Each click creates a new row; the slot is never deduplicated. Returns `404 NOT_FOUND` when the slot does not exist. |
 
 ## POST body shape
 
@@ -126,7 +135,7 @@ After `POST`, `PATCH`, or `DELETE`, the router calls `recomputeIfCurrentWeek(pri
 
 | File | Responsibility |
 |------|----------------|
-| `apps/api/src/plan.ts` | Request validation, response mapping, CRUD handlers, and `/cooked` endpoint. |
+| `apps/api/src/plan.ts` | Request validation, response mapping, CRUD handlers, the `/cooked` endpoint, the week-scoped `GET /api/plan/stats`, and the global `GET /api/stats` summary. |
 | `apps/api/src/plan-utils.ts` | ISO week parsing, week-range resolution, `HttpError` and `fieldError` helpers, the `PLAN_SLOTS` enum. |
 | `apps/api/src/cart-recompute.ts` | `recomputeAutoCartForWeek()` aggregator and `fetchCurrentWeek()` helper. |
 | `apps/api/src/errors.ts` | `PlanApiError` response shape used by plan + cart helpers. |
@@ -146,8 +155,11 @@ curl "http://localhost:3001/api/plan"
 # List a specific week
 curl "http://localhost:3001/api/plan?week=2026-W30"
 
-# Stats for current week
-curl "http://localhost:3001/api/plan/stats"
+# Lifetime stats for every recipe (including never-cooked)
+curl "http://localhost:3001/api/stats"
+
+# Week-scoped stats (legacy)
+curl "http://localhost:3001/api/plan/stats?week=2026-W30"
 
 # Create a planned slot
 curl -X POST http://localhost:3001/api/plan \
@@ -159,7 +171,7 @@ curl -X PATCH http://localhost:3001/api/plan/slot-1 \
   -H 'Content-Type: application/json' \
   -d '{"slot":"Lunch"}'
 
-# Mark as cooked
+# Mark as cooked (creates one new CookLog row; safe to repeat)
 curl -X POST http://localhost:3001/api/plan/slot-1/cooked
 
 # Delete
