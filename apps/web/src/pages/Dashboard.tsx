@@ -281,7 +281,7 @@ export function Dashboard(): JSX.Element {
       </section>
 
       <PlanSlotDialog
-        open={addDay !== null}
+        open={addDay !== null || editing !== null}
         day={addDay}
         editing={editing}
         onClose={() => {
