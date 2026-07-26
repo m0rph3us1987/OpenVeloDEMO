@@ -93,10 +93,51 @@ describe('aggregateCartForWeek', () => {
     });
     const result2 = await aggregateCartForWeek(prisma, week);
     const meatGroup2 = result2.groups.find((g) => g.category === 'Meat');
+    expect(meatGroup2).toBeDefined();
+    // Each manual row renders as a distinct item alongside any auto row.
+    expect(meatGroup2!.items).toHaveLength(1);
     const item2 = meatGroup2!.items[0];
     expect(item2.autoQuantity).toBe(200);
     expect(item2.manualQuantity).toBe(50);
     expect(item2.totalQuantity).toBe(250);
-    expect(item2.source.sort()).toEqual(['manual', 'plan']);
+    expect(item2.source).toEqual(['plan', 'manual']);
+    expect(item2.manualLineId).toBeTruthy();
+  });
+
+  it('keeps multiple manual rows as separate response items', async () => {
+    const week = currentWeek();
+    const beef = await prisma.ingredient.create({
+      data: { name: 'Beef', category: 'Meat', defaultUnit: 'g' },
+    });
+    await prisma.cartItem.create({
+      data: {
+        week,
+        ingredientId: beef.id,
+        unit: 'g',
+        quantity: 100,
+        source: 'manual',
+      },
+    });
+    await prisma.cartItem.create({
+      data: {
+        week,
+        ingredientId: beef.id,
+        unit: 'g',
+        quantity: 200,
+        source: 'manual',
+      },
+    });
+    const result = await aggregateCartForWeek(prisma, week);
+    const meatGroup = result.groups.find((g) => g.category === 'Meat');
+    expect(meatGroup).toBeDefined();
+    expect(meatGroup!.items).toHaveLength(2);
+    const manualIds = new Set(
+      meatGroup!.items.map((it) => it.manualLineId).filter(Boolean),
+    );
+    expect(manualIds.size).toBe(2);
+    const quantities = meatGroup!.items
+      .map((it) => it.manualQuantity)
+      .sort();
+    expect(quantities).toEqual([100, 200]);
   });
 });

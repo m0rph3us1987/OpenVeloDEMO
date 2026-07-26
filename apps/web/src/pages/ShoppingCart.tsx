@@ -113,16 +113,17 @@ function CartRow(props: CartRowProps): JSX.Element {
   );
   const quantityId = useId();
   const unitId = useId();
-  const rowKey = `${item.ingredientId}-${item.unit}`;
+  const rowKey = `${item.ingredientId}-${item.unit}-${item.manualLineId ?? 'auto'}`;
 
-  // Reset the editor whenever the manual quantity or its base unit
-  // changes from outside (e.g. server-side invalidation).
+  // Reset the editor whenever the manual quantity, its base unit, or
+  // the underlying line id changes from outside (e.g. server-side
+  // invalidation swapping a manual line for a different one).
   useEffect(() => {
     setQuantity(
       String(formatDisplayQuantity(item.manualQuantity, item.unit).value),
     );
     setUnit(defaultUnitForBase(item.unit));
-  }, [item.ingredientId, item.unit, item.manualQuantity]);
+  }, [item.ingredientId, item.unit, item.manualQuantity, item.manualLineId]);
 
   function commit(): void {
     const parsed = Number(quantity);
@@ -392,35 +393,56 @@ function applyLinePatchToCart(
       groups.push(group);
       continue;
     }
-    const items = group.items.filter(
-      (it) =>
-        it.ingredientId !== line.ingredientId || it.unit !== line.unit,
+    if (mode === 'delete') {
+      const items = group.items.filter((it) => it.manualLineId !== line.id);
+      if (items.length > 0) {
+        groups.push({ category: group.category, items });
+      }
+      continue;
+    }
+    // mode === 'upsert'
+    const existingIndex = group.items.findIndex(
+      (it) => it.manualLineId === line.id,
     );
-    const existing = group.items.find(
-      (it) => it.ingredientId === line.ingredientId && it.unit === line.unit,
-    );
-    if (mode === 'upsert' && existing) {
+    if (existingIndex >= 0) {
       // CRITICAL: preserve the existing autoQuantity — the PATCH endpoint
       // never modifies the plan amount, only the manual amount.
+      const existing = group.items[existingIndex];
       const autoQuantity = existing.autoQuantity;
       const manualQuantity = line.quantity;
       const sources: CartItem['source'] = [];
       if (autoQuantity > 0) sources.push('plan');
       if (manualQuantity > 0) sources.push('manual');
-      items.push({
+      const items = [...group.items];
+      items[existingIndex] = {
         ...existing,
         manualQuantity,
         totalQuantity: autoQuantity + manualQuantity,
         source: sources,
-      });
-    }
-    if (items.length > 0) {
+      };
       groups.push({ category: group.category, items });
+      continue;
     }
+    // No matching manual line — likely a newly created distinct line.
+    // Append a new manual row in its category bucket.
+    const items = [...group.items];
+    items.push({
+      ingredientId: line.ingredientId,
+      name: line.ingredientName,
+      category: line.category,
+      autoQuantity: 0,
+      manualQuantity: line.quantity,
+      totalQuantity: line.quantity,
+      unit: line.unit,
+      source: line.quantity > 0 ? ['manual'] : [],
+      manualLineId: line.id,
+    });
+    groups.push({ category: group.category, items });
   }
-  if (mode === 'upsert' && !groups.some((g) => g.category === line.category)) {
-    const source: CartItem['source'] =
-      line.quantity > 0 ? ['manual'] : [];
+  if (
+    mode === 'upsert' &&
+    !groups.some((g) => g.category === line.category)
+  ) {
     groups.push({
       category: line.category,
       items: [
@@ -432,8 +454,8 @@ function applyLinePatchToCart(
           manualQuantity: line.quantity,
           totalQuantity: line.quantity,
           unit: line.unit,
-          source,
-          manualLineId: mode === 'upsert' ? line.id : null,
+          source: line.quantity > 0 ? ['manual'] : [],
+          manualLineId: line.id,
         },
       ],
     });
@@ -473,7 +495,7 @@ export function ShoppingCart(): JSX.Element {
       const ingredient = ingredientsQuery.data?.find((i) => i.id === input.ingredientId);
       if (previous && ingredient) {
         const placeholder: CartLineRecord = {
-          id: `tmp-${Date.now()}`,
+          id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           ingredientId: input.ingredientId,
           ingredientName: ingredient.name,
           category: ingredient.category,
@@ -732,7 +754,7 @@ export function ShoppingCart(): JSX.Element {
                     <tbody>
                       {group.items.map((item) => (
                         <CartRow
-                          key={`${item.ingredientId}-${item.unit}`}
+                          key={`${item.ingredientId}-${item.unit}-${item.manualLineId ?? 'auto'}`}
                           item={item}
                           editable={isCurrent}
                           unitOptions={DISPLAY_UNITS}

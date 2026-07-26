@@ -109,8 +109,8 @@ model CartItem {
   updatedAt    DateTime @updatedAt
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
 
-  @@unique([week, ingredientId, unit, source])
   @@index([week])
+  @@index([week, ingredientId])
 }
 
 model CartHistory {
