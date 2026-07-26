@@ -3,7 +3,7 @@ type: Component
 title: Layout Component
 description: Top-level shell that renders a responsive persistent sidebar, sidebar navigation, theme toggle, and the active route's content.
 tags: [web, layout, navigation, a11y]
-timestamp: 2026-07-26T11:53:07Z
+timestamp: 2026-07-26T12:28:00Z
 ---
 
 # Source
@@ -12,13 +12,13 @@ timestamp: 2026-07-26T11:53:07Z
 
 # Integration
 
-`App.tsx` mounts `Layout` for `/`, then renders each matched child route through its `<Outlet />`. The sidebar links use `useLocation()` and `matchPath()` to derive the active state, while the theme button reads and updates [Theme Store](/web/theme-store.md).
+`App.tsx` mounts `Layout` for `/`, then renders each matched child route through its `<Outlet />`. The sidebar uses React Router's `NavLink` to derive the active state per item, while the theme button reads and updates [Theme Store](/web/theme-store.md).
 
 # Key Files
 
 | File | Responsibility |
 |------|----------------|
-| `apps/web/src/components/Layout.tsx` | Persistent shell, navigation, active-route styling, and theme control. |
+| `apps/web/src/components/Layout.tsx` | Persistent shell, navigation via `NavLink`, active-route styling, and theme control. |
 | `apps/web/src/App.tsx` | Registers the layout and its child routes. |
 | `apps/web/src/store/theme.ts` | Stores the selected theme and applies the document class. |
 | `apps/web/src/components/ui/button.tsx` | Provides the outline button used by the theme control. |
@@ -64,15 +64,17 @@ Defined in the `NAV_ITEMS` constant at the top of the file:
 | Ingredients | `/ingredients` | `false` |
 | Shopping Cart | `/shopping-cart` | `false` |
 
+Each item is rendered as a React Router `NavLink`. The `end` flag is forwarded so that the Dashboard only highlights on an exact `/` match, while the other items highlight on their prefix.
+
 # Active Link Styling
 
-The layout compares `location.pathname` with each item using `matchPath()` and applies:
+Each `NavLink` passes its `isActive` flag through a `navLinkClassName(isActive)` helper, which composes the Tailwind classes:
 
 - `bg-accent text-background` for the active route.
 - `hover:bg-muted` for inactive routes.
-- `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background` on every link so keyboard users see a clear focus indicator.
+- `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background` on every link so keyboard users see a clear focus indicator.
 
-Because the active state follows the router location, browser Back and Forward navigation immediately updates the highlighted link.
+Because `NavLink` reads active state directly from React Router's location, browser Back and Forward navigation immediately updates the highlighted link.
 
 # Theme Toggle
 
