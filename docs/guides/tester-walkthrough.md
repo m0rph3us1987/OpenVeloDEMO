@@ -42,7 +42,7 @@ If the viewport is short, the sidebar scrolls internally (`overflow-y-auto`) ins
 - A control row with `←`, `→`, and `Today` buttons plus a `Week of <YYYY-MM-DD> – <YYYY-MM-DD>` label.
 - A seven-column `Weekly plan` grid (Monday → Sunday). Today's column is highlighted with `border-accent ring-2 ring-ring` when viewing the current ISO week.
 - Each column has a `+ Add` button. Each planned meal shows the meal-slot label, the recipe name, optional notes, an `I cooked this` button, and a red `X` delete button.
-- Below the grid, a `Planned slots` table (Day / Slot / Recipe / Notes) mirrors the planned slots. The recipe name is an underlined edit trigger.
+- Below the grid, a `Planned slots` table (Day / Slot / Recipe / Notes) mirrors the planned slots. Click an underlined recipe name to open the pre-filled `Edit planned meal` dialog; changing a field and clicking `Save` updates the slot and closes the dialog.
 - At the bottom, a `Total times cooked per recipe` table (Recipe / Times cooked / Last cooked) summarises cook logs for the active week.
 
 See [Dashboard Page](/web/dashboard.md) for the full add/edit/delete/cook interaction steps.
