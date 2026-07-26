@@ -15,8 +15,8 @@ export function Layout(): JSX.Element {
   const toggle = useThemeStore((s) => s.toggle);
 
   return (
-    <div className="flex h-full">
-      <aside className="w-60 border-r border-muted p-4 flex flex-col gap-2">
+    <div className="flex h-full min-h-0">
+      <aside className="w-56 md:w-60 lg:w-64 shrink-0 border-r border-muted p-4 flex flex-col gap-2 h-full overflow-y-auto">
         <h1 className="text-xl font-bold mb-4">OpenVelo</h1>
         <nav className="flex flex-col gap-1 flex-1">
           {NAV_ITEMS.map((item) => (
@@ -27,6 +27,7 @@ export function Layout(): JSX.Element {
               className={({ isActive }) =>
                 cn(
                   'px-3 py-2 rounded-md text-sm',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   isActive
                     ? 'bg-accent text-background'
                     : 'hover:bg-muted',
@@ -41,7 +42,7 @@ export function Layout(): JSX.Element {
           {theme === 'dark' ? 'Light mode' : 'Dark mode'}
         </Button>
       </aside>
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="flex-1 min-w-0 p-4 md:p-6 overflow-auto">
         <Outlet />
       </main>
     </div>

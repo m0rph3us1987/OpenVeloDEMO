@@ -10,7 +10,7 @@ OpenVelo is a meal-planning application composed of an Express API, a React web 
 
 * [Monorepo Layout](/architecture/monorepo.md) - Workspaces, root scripts, and cross-workspace dependencies.
 * [API Server](/architecture/api-server.md) - Express bootstrap, middleware order, and environment variables.
-* [Web Application](/architecture/web-app.md) - React bootstrap, routing, and state management.
+* [Web Application](/architecture/web-app.md) - React bootstrap, routing, state management, and styling tokens.
 
 # API
 
@@ -22,8 +22,9 @@ OpenVelo is a meal-planning application composed of an Express API, a React web 
 
 # Web
 
-* [Layout Component](/web/layout.md) - Sidebar navigation, theme toggle, and content outlet.
+* [Layout Component](/web/layout.md) - Responsive persistent sidebar navigation, theme toggle, and content outlet.
 * [Theme Store](/web/theme-store.md) - Zustand store with persistence and OS preference fallback.
+* [Focus Ring Design Token](/web/focus-ring.md) - Shared `ring-ring` focus-visible style and `--ring` CSS variable.
 
 # Shared Packages
 

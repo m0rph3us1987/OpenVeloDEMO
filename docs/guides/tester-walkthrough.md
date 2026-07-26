@@ -3,7 +3,7 @@ type: Guide
 title: Tester Walkthrough
 description: Navigation steps and expected UI behaviors for each route in the OpenVelo web app.
 tags: [guide, tester, ui]
-timestamp: 2026-07-26T11:39:07Z
+timestamp: 2026-07-26T11:53:07Z
 ---
 
 # Prerequisites
@@ -13,10 +13,24 @@ timestamp: 2026-07-26T11:39:07Z
 
 # Global Layout
 
-The UI is a two-column layout:
+The UI is a two-column flex layout. The sidebar is **always visible** (it never collapses) and resizes responsively; the right area scrolls independently.
 
-- **Left sidebar** — branded `OpenVelo` heading, four navigation links, and a `Light/Dark mode` toggle button at the bottom.
-- **Right content area** — the active page renders inside an `<Outlet />`.
+## Sidebar Widths
+
+| Viewport | Sidebar Width |
+|----------|---------------|
+| Default (mobile / `< md`) | `w-56` (224px) |
+| `md` and up (≥ 768px) | `w-60` (240px) |
+| `lg` and up (≥ 1024px) | `w-64` (256px) |
+
+The main content area uses `p-4` padding on small screens and `p-6` from the `md` breakpoint up. Resize the window and confirm the sidebar stays put while only its width changes.
+
+## Sidebar Contents
+
+- **Left sidebar** — branded `OpenVelo` heading, four navigation links (`Dashboard`, `Recipes`, `Ingredients`, `Shopping Cart`), and a `Light mode` / `Dark mode` toggle button at the bottom.
+- **Right content area** — the active page renders inside an `<Outlet />` and scrolls independently of the sidebar.
+
+If the viewport is short, the sidebar scrolls internally (`overflow-y-auto`) instead of clipping the toggle button off-screen.
 
 # Route: Dashboard (`/`)
 
@@ -56,9 +70,21 @@ The UI is a two-column layout:
 
 The currently selected nav link receives an `bg-accent text-background` background, while inactive links show a `hover:bg-muted` hover state. Click each link and confirm the active state moves with the selection.
 
+# Keyboard Focus (Focus Rings)
+
+**How to verify:** Press `Tab` repeatedly from the page load. Do **not** click anything with the mouse first.
+
+**Expected behavior:**
+- Each nav link and the theme toggle button shows a 2px blue ring (`ring-ring`) with a 2px gap to the underlying surface (`ring-offset-background`) when focused via keyboard.
+- The ring color is blue in both light and dark themes; only the hue shifts.
+- Clicking an element with the mouse does **not** show the ring (`focus-visible` is keyboard-only).
+- Focus order: `Dashboard` → `Recipes` → `Ingredients` → `Shopping Cart` → theme toggle.
+
+See [Focus Ring Design Token](/web/focus-ring.md) for the underlying token.
+
 # Theme Toggle
 
-**How to use it:** Click the `Light mode` / `Dark mode` button at the bottom of the sidebar.
+**How to use it:** Click the `Light mode` / `Dark mode` button at the bottom of the sidebar. You can also reach it with the keyboard — `Tab` to it and press `Space`/`Enter`; the focus ring should be visible before activation.
 
 **Expected behavior:**
 - The button label flips between `Light mode` and `Dark mode`.

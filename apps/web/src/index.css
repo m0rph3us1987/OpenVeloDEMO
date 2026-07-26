@@ -7,6 +7,7 @@
   --foreground: 222 47% 11%;
   --muted: 210 40% 96%;
   --accent: 222 47% 11%;
+  --ring: 222 89% 55%;
 }
 
 .dark {
@@ -14,6 +15,7 @@
   --foreground: 0 0% 100%;
   --muted: 217 33% 17%;
   --accent: 0 0% 100%;
+  --ring: 217 91% 60%;
 }
 
 html,

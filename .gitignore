@@ -5,6 +5,7 @@ coverage
 .env*
 data/*
 !data/.gitkeep
+.kilo/
 .kilo/node_modules/
 dist/
 .npm/
