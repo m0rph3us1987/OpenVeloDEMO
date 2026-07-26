@@ -1,7 +1,7 @@
 ---
 type: Web
 title: Dashboard Page
-description: Weekly meal-planner UI rendered at `/`, including the seven-day grid, add/edit/delete dialogs, and per-recipe cooking summary.
+description: Weekly meal-planner UI rendered at `/`, including the seven-day grid, add/edit/delete dialogs, cook tracking, and per-recipe cooking summary.
 tags: [web, dashboard, plan, react, tanstack-query]
 timestamp: 2026-07-26T15:59:39Z
 ---
@@ -107,7 +107,7 @@ State transitions:
 
 | File | Responsibility |
 |------|----------------|
-| `apps/web/src/pages/Dashboard.tsx` | Page-level state, React Query wiring, dialog orchestration, and stats rendering. |
+| `apps/web/src/pages/Dashboard.tsx` | Page-level state, React Query wiring, dialog orchestration, and stats rendering. The dialog is mounted for both add and edit state (`addDay !== null || editing !== null`). |
 | `apps/web/src/components/WeeklyPlan.tsx` | Seven-column grid of planned meals, per-slot actions, and cook handling. |
 | `apps/web/src/components/PlanSlotDialog.tsx` | Add/edit dialog and `ConfirmDeleteDialog`. |
 | `apps/web/src/lib/plan.ts` | ISO week helpers, typed API clients, and day-label constants. |

@@ -151,6 +151,34 @@ function makeFetch(): typeof fetch {
       return new Response(null, { status: 204 });
     }
 
+    if (idMatch && method === 'PATCH') {
+      const id = idMatch[1];
+      const slot = planState.slots.find((s) => s.id === id);
+      if (!slot) {
+        return new Response(JSON.stringify({ error: 'not found', code: 'NOT_FOUND' }), { status: 404 });
+      }
+      const body = JSON.parse(bodyText ?? '{}') as {
+        day?: number;
+        slot?: string;
+        recipeId?: string;
+        notes?: string | null;
+      };
+      if (body.day !== undefined) {
+        slot.day = body.day;
+        const start = new Date(`${WEEK_START}T00:00:00.000Z`);
+        start.setUTCDate(start.getUTCDate() + (body.day - 1));
+        slot.date = start.toISOString().slice(0, 10);
+      }
+      if (body.slot !== undefined) slot.slot = body.slot;
+      if (body.recipeId !== undefined) {
+        slot.recipeId = body.recipeId;
+        const recipe = recipesData.find((r) => r.id === body.recipeId);
+        slot.recipeName = recipe?.name ?? slot.recipeName;
+      }
+      if (body.notes !== undefined) slot.notes = body.notes;
+      return new Response(JSON.stringify(slot), { status: 200 });
+    }
+
     if (url.endsWith('/api/plan') && method === 'POST') {
       const body = JSON.parse(bodyText ?? '{}') as {
         day?: number;
@@ -258,6 +286,30 @@ describe('Dashboard page', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Next week' }));
     expect(callLog.some((c) => c.method === 'GET' && c.url.includes('/api/plan?week='))).toBe(true);
+  });
+
+  it('opens the edit dialog when the underlined recipe in the Planned slots table is clicked and saves the PATCH', async () => {
+    setup();
+    const user = userEvent.setup();
+    const table = await screen.findByTestId('slot-table');
+    const editButton = await within(table).findByRole('button', { name: 'Pasta' });
+    await user.click(editButton);
+    const dialog = await screen.findByRole('dialog', { name: 'Edit planned meal' });
+    expect(within(dialog).getByLabelText('Slot')).toHaveValue('Lunch');
+    expect(within(dialog).getByLabelText('Recipe')).toHaveValue('rec-pasta');
+    await user.selectOptions(within(dialog).getByLabelText('Slot'), 'Dinner');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      const patches = callLog.filter(
+        (c) => c.method === 'PATCH' && c.url.endsWith('/api/plan/slot-1'),
+      );
+      expect(patches).toHaveLength(1);
+      expect(patches[0].body).toMatchObject({ slot: 'Dinner' });
+    });
+    await waitFor(() => {
+      const updatedTable = screen.getByTestId('slot-table');
+      expect(within(updatedTable).getAllByText('Dinner').length).toBeGreaterThan(0);
+    });
   });
 
   it('surfaces a POST error in the banner and lets the user dismiss it', async () => {

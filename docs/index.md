@@ -27,7 +27,7 @@ OpenVelo is a meal-planning application composed of an Express API, a React web 
 
 # Web
 
-* [Dashboard Page](/web/dashboard.md) - Weekly meal-planner UI: seven-day grid, add/edit/delete dialogs, cook tracking, and per-recipe summary.
+* [Dashboard Page](/web/dashboard.md) - Weekly meal-planner UI: seven-day grid, working pre-filled edit dialog, add/delete dialogs, cook tracking, and per-recipe summary.
 * [Ingredients Page](/web/ingredients.md) - Tester workflow and technical wiring for filtering and managing ingredients.
 * [Recipes Page](/web/recipes.md) - Tester workflow and technical wiring for managing recipes and their ingredient rows.
 * [Layout Component](/web/layout.md) - Responsive persistent sidebar navigation (NavLink), theme toggle, and content outlet.
