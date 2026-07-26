@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/components/Layout.tsx","./src/components/ui/button.tsx","./src/lib/utils.ts","./src/pages/PlaceholderPages.tsx","./src/store/theme.ts","./tests/layout.test.tsx","./tests/theme.test.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/main.tsx","./src/components/Layout.tsx","./src/components/RouterErrorElement.tsx","./src/components/ui/button.tsx","./src/lib/utils.ts","./src/pages/NotFound.tsx","./src/pages/PlaceholderPages.tsx","./src/store/theme.ts","./tests/layout.test.tsx","./tests/theme.test.ts"],"version":"5.9.3"}

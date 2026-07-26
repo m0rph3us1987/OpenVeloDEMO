@@ -102,3 +102,18 @@ curl http://localhost:3001/api/health
 ```
 
 See [Health Endpoint](/api/health.md).
+
+# Route: NotFound (any unmatched URL, e.g. `/unknown-route` or `/recipes/new`)
+
+**How to reach it:** Type any URL that does not match a registered route into the address bar — for example `http://localhost:5173/unknown-route` or `http://localhost:5173/recipes/new`.
+
+**Expected behavior:**
+- The persistent sidebar remains visible with all four nav links and the theme toggle unchanged.
+- The sidebar scrolls and the theme toggle still work.
+- The main content area shows:
+  - Heading: `Page not found`.
+  - Subtext: `The page you are looking for does not exist.`
+  - A `Back to Dashboard` link that routes to `/`.
+- Clicking `Back to Dashboard` (or any sidebar link) returns to a normal page.
+
+See [NotFound Page](/web/not-found.md) for the underlying component and [RouterErrorElement](/web/router-error-element.md) for the sibling error boundary that handles thrown 404 responses from loaders.
