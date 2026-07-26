@@ -17,3 +17,56 @@ WHEN NEW."unit" NOT IN ('g', 'ml', 'pcs')
 BEGIN
   SELECT RAISE(ABORT, 'RecipeIngredient.unit must be one of g, ml, pcs');
 END;
+
+-- Defence-in-depth enforcement for the weekly-planner meal-slot enum
+-- ({Breakfast, Lunch, Dinner, Snack}). The API router's zod validation is
+-- the primary check; this trigger guards direct database writers.
+CREATE TRIGGER IF NOT EXISTS "MealPlanSlot_slot_enum"
+BEFORE INSERT ON "MealPlanSlot"
+FOR EACH ROW
+WHEN NEW."slot" NOT IN ('Breakfast', 'Lunch', 'Dinner', 'Snack')
+BEGIN
+  SELECT RAISE(ABORT, 'MealPlanSlot.slot must be one of Breakfast, Lunch, Dinner, Snack');
+END;
+
+CREATE TRIGGER IF NOT EXISTS "MealPlanSlot_slot_enum_update"
+BEFORE UPDATE ON "MealPlanSlot"
+FOR EACH ROW
+WHEN NEW."slot" NOT IN ('Breakfast', 'Lunch', 'Dinner', 'Snack')
+BEGIN
+  SELECT RAISE(ABORT, 'MealPlanSlot.slot must be one of Breakfast, Lunch, Dinner, Snack');
+END;
+
+-- Restrict day values to the 1..7 range (1 = Monday, 7 = Sunday).
+CREATE TRIGGER IF NOT EXISTS "MealPlanSlot_day_range"
+BEFORE INSERT ON "MealPlanSlot"
+FOR EACH ROW
+WHEN NEW."day" < 1 OR NEW."day" > 7
+BEGIN
+  SELECT RAISE(ABORT, 'MealPlanSlot.day must be between 1 and 7');
+END;
+
+CREATE TRIGGER IF NOT EXISTS "MealPlanSlot_day_range_update"
+BEFORE UPDATE ON "MealPlanSlot"
+FOR EACH ROW
+WHEN NEW."day" < 1 OR NEW."day" > 7
+BEGIN
+  SELECT RAISE(ABORT, 'MealPlanSlot.day must be between 1 and 7');
+END;
+
+-- Restrict CartItem.source to the known values.
+CREATE TRIGGER IF NOT EXISTS "CartItem_source_enum"
+BEFORE INSERT ON "CartItem"
+FOR EACH ROW
+WHEN NEW."source" NOT IN ('auto', 'manual')
+BEGIN
+  SELECT RAISE(ABORT, 'CartItem.source must be one of auto, manual');
+END;
+
+CREATE TRIGGER IF NOT EXISTS "CartItem_source_enum_update"
+BEFORE UPDATE ON "CartItem"
+FOR EACH ROW
+WHEN NEW."source" NOT IN ('auto', 'manual')
+BEGIN
+  SELECT RAISE(ABORT, 'CartItem.source must be one of auto, manual');
+END;

@@ -2,6 +2,10 @@ import { Router, type Response } from 'express';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { BASE_UNITS, BaseUnit } from '@openvelo/types';
 import { z } from 'zod';
+import {
+  fetchCurrentWeek,
+  recomputeAutoCartForWeek,
+} from './cart-recompute.js';
 
 export type RecipeIngredientRecord = {
   ingredientId: string;
@@ -293,6 +297,11 @@ export function createRecipesRouter(prisma: PrismaClient): Router {
           .json({ error: 'Recipe not found', code: 'NOT_FOUND' } satisfies RecipeError);
         return;
       }
+      const affectedWeeks = await prisma.mealPlanSlot.findMany({
+        where: { recipeId: id },
+        select: { week: true },
+      });
+      const weeks = Array.from(new Set(affectedWeeks.map((slot) => slot.week)));
       await prisma.$transaction(async (tx) => {
         await tx.mealPlanSlot.deleteMany({ where: { recipeId: id } });
         await tx.cookLog.deleteMany({ where: { recipeId: id } });
@@ -303,6 +312,12 @@ export function createRecipesRouter(prisma: PrismaClient): Router {
         await tx.recipeIngredient.deleteMany({ where: { recipeId: id } });
         await tx.recipe.delete({ where: { id } });
       });
+      const current = await fetchCurrentWeek(prisma);
+      for (const week of weeks) {
+        if (week === current) {
+          await recomputeAutoCartForWeek(prisma, week);
+        }
+      }
       res.status(204).end();
     } catch (err) {
       if (isPrismaKnownError(err) && err.code === 'P2003') {

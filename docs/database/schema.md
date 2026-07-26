@@ -53,26 +53,32 @@ Join table linking [Recipe](#recipe) to [Ingredient](#ingredient). Recipe ingred
 
 ## MealPlanSlot
 
-A scheduled recipe for a specific date and meal slot.
+A scheduled recipe for a specific ISO week, day, meal slot, and recipe. Consumed by the [Plan API](/api/plan.md) and the [Dashboard Page](/web/dashboard.md).
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `String` (cuid) | Primary key. |
-| `date` | `DateTime` | Calendar date. |
-| `slot` | `String` | Free-form label (e.g. `breakfast`, `dinner`). |
+| `week` | `String` | ISO week label `YYYY-Www` (e.g. `2026-W30`); indexed with `day`. |
+| `day` | `Int` | Day of the week 1–7 (1 = Monday, 7 = Sunday); indexed with `week`. |
+| `date` | `DateTime` | Resolved calendar date derived from `weekStart + (day - 1)`. |
+| `slot` | `String` | One of `Breakfast`, `Lunch`, `Dinner`, `Snack`. Enforced at the API and database layers (see [Plan API](/api/plan.md)). |
 | `recipeId` | `String` | FK → `Recipe.id` (indexed). |
-| `servings` | `Int` | Defaults to `1`. |
+| `servings` | `Int` | Defaults to `1`. Used as the scaling factor when auto-deriving the weekly cart. |
+| `notes` | `String?` | Optional free-form notes (max 2000 chars at the API). |
+| `createdAt` | `DateTime` | Auto-set on create. |
+| `cookLogs` | relation | [CookLog](#cooklog) rows that originated from this slot (see below). |
 
 ## CookLog
 
-Historical record of a recipe being cooked, optionally tied to an ingredient variant.
+Historical record of a recipe being cooked, optionally tied to an ingredient variant and a planned slot.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `String` (cuid) | Primary key. |
 | `recipeId` | `String` | FK → `Recipe.id` (indexed). |
 | `ingredientId` | `String?` | Optional FK → `Ingredient.id`. |
-| `cookedAt` | `DateTime` | Defaults to `now()`. |
+| `mealPlanSlotId` | `String?` | Optional FK → `MealPlanSlot.id` (indexed). Set to `NULL` (`onDelete: SetNull`) when the originating slot is deleted. Historical cook logs created without a slot have `null`. |
+| `cookedAt` | `DateTime` | Defaults to `now()` (indexed). |
 | `notes` | `String?` | Optional free-form notes. |
 
 ## CartSnapshot
@@ -86,14 +92,31 @@ Persisted shopping cart state for a recipe.
 | `takenAt` | `DateTime` | Defaults to `now()`. |
 | `itemsJson` | `String` | Serialized JSON snapshot of the cart items. |
 
+## CartItem
+
+The auto-derived shopping list aggregated from every [MealPlanSlot](#mealplanslot) in a given ISO week. Maintained by the [Cart Recompute](/architecture/cart-recompute.md) pipeline after every Plan mutation.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `String` (cuid) | Primary key. |
+| `week` | `String` | ISO week label `YYYY-Www` (indexed). |
+| `ingredientId` | `String` | FK → `Ingredient.id`. |
+| `unit` | `String` | One of `g`, `ml`, or `pcs`. |
+| `quantity` | `Float` | Sum of every slot's `RecipeIngredient.quantity * slot.servings` for the (week, ingredientId, unit) tuple. |
+| `source` | `String` | One of `auto` (derived from the plan) or `manual` (user-added). Enforced at the API and database layers. |
+| `updatedAt` | `DateTime` | Auto-updated on write. |
+
+Unique index: `(week, ingredientId, unit, source)` — no two rows may share the same `(week, ingredient, unit, source)` tuple.
+
 # Relationships
 
 ```
 Ingredient ──< RecipeIngredient >── Recipe
    │                                  │
-   │                                  ├──< MealPlanSlot
+   │                                  ├──< MealPlanSlot ──< CookLog
    └──< CookLog                       ├──< CookLog
-                                      └──< CartSnapshot
+                                      ├──< CartSnapshot
+                                      └──< CartItem (week, source=auto|manual)
 ```
 
 # Recipe Delete Cascade (API layer)

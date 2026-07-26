@@ -242,7 +242,13 @@ describe('Recipes API', () => {
       data: [{ recipeId }, { recipeId }],
     });
     await prisma.mealPlanSlot.create({
-      data: { recipeId, date: new Date('2026-07-26'), slot: 'dinner' },
+      data: {
+        recipeId,
+        date: new Date('2026-07-26'),
+        slot: 'Dinner',
+        week: '2026-W31',
+        day: 1,
+      },
     });
     const del = await request(app).delete(`/api/recipes/${recipeId}`);
     expect(del.status).toBe(204);
@@ -319,7 +325,13 @@ describe('Recipes API', () => {
     });
     await prisma.cookLog.create({ data: { recipeId } });
     await prisma.mealPlanSlot.create({
-      data: { recipeId, date: new Date('2026-07-26'), slot: 'lunch' },
+      data: {
+        recipeId,
+        date: new Date('2026-07-26'),
+        slot: 'Lunch',
+        week: '2026-W31',
+        day: 1,
+      },
     });
 
     const del = await request(app).delete(`/api/recipes/${recipeId}`);

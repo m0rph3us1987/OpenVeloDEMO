@@ -113,20 +113,16 @@ export async function bootstrap(deps = realDeps) {
     await ensureDirFor(target.label, deps);
   }
 
-  const fileExists = target.ownsFile
-    ? deps.existsSync(target.label)
-    : deps.existsSync(parseSqlitePath(target.url));
-
-  if (!fileExists) {
-    deps.log(`pushing schema to ${target.url}`);
-    runPrisma(
-      ['db', 'push', '--skip-generate', '--accept-data-loss', '--schema', PATHS.SCHEMA_PATH],
-      { DATABASE_URL: target.url },
-      deps,
-    );
-  } else {
-    deps.log(`database already present at ${target.label ?? target.url}; skipping db push`);
-  }
+  // Always push the schema (with --accept-data-loss so an already-present
+  // SQLite file from a previous schema revision is reshaped into the latest
+  // model). The script's seed/constraints steps are idempotent and safe to
+  // re-apply on every boot.
+  deps.log(`pushing schema to ${target.url}`);
+  runPrisma(
+    ['db', 'push', '--skip-generate', '--accept-data-loss', '--schema', PATHS.SCHEMA_PATH],
+    { DATABASE_URL: target.url },
+    deps,
+  );
 
   deps.log(`seeding ingredients from ${PATHS.SEED_PATH}`);
   runPrisma(

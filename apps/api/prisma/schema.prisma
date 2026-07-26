@@ -48,26 +48,40 @@ model RecipeIngredient {
 }
 
 model MealPlanSlot {
-  id        String   @id @default(cuid())
-  date      DateTime
-  slot      String
-  recipeId  String
-  servings  Int      @default(1)
-  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  id           String     @id @default(cuid())
+  // ISO week string "YYYY-Www", e.g. "2026-W30".
+  week         String
+  // 1 = Monday, ..., 7 = Sunday. Calendar date is derived from weekStart + (day - 1).
+  day          Int
+  date         DateTime
+  slot         String
+  recipeId     String
+  servings     Int        @default(1)
+  notes        String?
+  createdAt    DateTime   @default(now())
+  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+  cookLogs     CookLog[]
 
   @@index([recipeId])
+  @@index([week, day])
 }
 
 model CookLog {
-  id           String     @id @default(cuid())
-  recipeId     String
-  ingredientId String?
-  cookedAt     DateTime   @default(now())
-  notes        String?
-  recipe       Recipe     @relation(fields: [recipeId], references: [id])
-  ingredient   Ingredient? @relation(fields: [ingredientId], references: [id])
+  id              String        @id @default(cuid())
+  recipeId        String
+  ingredientId    String?
+  // Optional tie to the planned slot the cook event originated from. Historical
+  // cook logs without a planned slot have null here.
+  mealPlanSlotId  String?
+  cookedAt        DateTime      @default(now())
+  notes           String?
+  recipe          Recipe        @relation(fields: [recipeId], references: [id])
+  ingredient      Ingredient?   @relation(fields: [ingredientId], references: [id])
+  mealPlanSlot    MealPlanSlot? @relation(fields: [mealPlanSlotId], references: [id], onDelete: SetNull)
 
   @@index([recipeId])
+  @@index([mealPlanSlotId])
+  @@index([cookedAt])
 }
 
 model CartSnapshot {
@@ -78,4 +92,19 @@ model CartSnapshot {
   recipe    Recipe?  @relation(fields: [recipeId], references: [id])
 
   @@index([recipeId])
+}
+
+model CartItem {
+  id           String   @id @default(cuid())
+  // ISO week string "YYYY-Www".
+  week         String
+  ingredientId String
+  unit         String
+  quantity     Float
+  // 'auto' derived from weekly plan; 'manual' added by user.
+  source       String
+  updatedAt    DateTime @updatedAt
+
+  @@unique([week, ingredientId, unit, source])
+  @@index([week])
 }
