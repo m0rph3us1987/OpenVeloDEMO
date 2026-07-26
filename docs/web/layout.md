@@ -1,9 +1,9 @@
 ---
 type: Component
 title: Layout Component
-description: Top-level shell that renders the sidebar navigation, theme toggle, and the active route's content.
-tags: [web, layout, navigation]
-timestamp: 2026-07-26T11:39:07Z
+description: Top-level shell that renders a responsive persistent sidebar, sidebar navigation, theme toggle, and the active route's content.
+tags: [web, layout, navigation, a11y]
+timestamp: 2026-07-26T11:53:07Z
 ---
 
 # Source
@@ -13,15 +13,31 @@ timestamp: 2026-07-26T11:39:07Z
 # Render Tree
 
 ```
-<div class="flex h-full">
-  <aside>
+<div class="flex h-full min-h-0">          <!-- flex row, min-h-0 so children can shrink/scroll -->
+  <aside class="w-56 md:w-60 lg:w-64 shrink-0 ... h-full overflow-y-auto">
     <h1>OpenVelo</h1>
-    <nav>{NAV_ITEMS.map(NavLink)}</nav>
-    <Button variant="outline">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</Button>
+    <nav>{NAV_ITEMS.map(NavLink)}</nav>    <!-- focus-visible ring on each link -->
+    <Button variant="outline">             <!-- focus-visible ring via Button base -->
+      {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+    </Button>
   </aside>
-  <main><Outlet /></main>
+  <main class="flex-1 min-w-0 p-4 md:p-6 overflow-auto">
+    <Outlet />
+  </main>
 </div>
 ```
+
+# Responsive Sidebar Widths
+
+The sidebar is **always visible** (no collapse/toggle) and adapts to the viewport:
+
+| Breakpoint | Sidebar Width |
+|------------|---------------|
+| `< md` (default) | `w-56` (224px) |
+| `md` (≥ 768px) | `w-60` (240px) |
+| `lg` (≥ 1024px) | `w-64` (256px) |
+
+The main content uses responsive padding (`p-4 md:p-6`) and `min-w-0` so wide children (tables, code blocks) do not force horizontal scroll on the page — they scroll inside `<main>` instead.
 
 # Navigation Items
 
@@ -40,17 +56,26 @@ Defined in the `NAV_ITEMS` constant at the top of the file:
 
 - `bg-accent text-background` for the active route.
 - `hover:bg-muted` for inactive routes.
+- `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background` on every link so keyboard users see a clear focus indicator.
 
 # Theme Toggle
 
-The footer button reads `theme` from [Theme Store](/web/theme-store.md) and calls `toggle()` on click. The label is `Light mode` when the current theme is dark, else `Dark mode`.
+The footer button reads `theme` from [Theme Store](/web/theme-store.md) and calls `toggle()` on click. The label is `Light mode` when the current theme is dark, else `Dark mode`. It uses the shared `Button` primitive, which also applies the focus ring.
 
 # Accessibility
 
-The toggle button has `aria-label="Toggle theme"` so screen readers announce the action regardless of the visible label.
+- The toggle button has `aria-label="Toggle theme"` so screen readers announce the action regardless of the visible label.
+- Every nav link and the toggle button renders a 2px focus ring (`ring-ring`) with a 2px offset against the page background when focused via keyboard (`focus-visible`).
+- Sidebar uses `shrink-0` so it never collapses, and `overflow-y-auto` so long nav lists scroll inside the aside instead of overflowing the viewport.
 
 # Adding a New Sidebar Entry
 
 1. Append a new entry to `NAV_ITEMS` in `apps/web/src/components/Layout.tsx`.
 2. Register the corresponding route in `apps/web/src/App.tsx`.
 3. Implement the page component (replace a placeholder in `PlaceholderPages.tsx` or create a new file under `apps/web/src/pages/`).
+
+# Related
+
+- [Web Application](/architecture/web-app.md) — routing and providers wired around the layout.
+- [Theme Store](/web/theme-store.md) — backing store for the toggle button.
+- [Tester Walkthrough](/guides/tester-walkthrough.md) — what to verify in the UI.

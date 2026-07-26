@@ -3,7 +3,7 @@ type: Architecture
 title: Web Application
 description: React SPA structure, routing, state management, and styling.
 tags: [web, react, vite, spa]
-timestamp: 2026-07-26T11:39:07Z
+timestamp: 2026-07-26T11:53:07Z
 ---
 
 # Overview
@@ -37,16 +37,31 @@ All routes are children of the `Layout` component, which renders the sidebar and
 |-------|------|---------|
 | `useThemeStore` | `apps/web/src/store/theme.ts` | Light/dark theme with `localStorage` persistence and `prefers-color-scheme` fallback. See [Theme Store](/web/theme-store.md). |
 
+# Layout & Styling
+
+The shell uses a persistent two-column flex layout: a responsive sidebar (always visible, never collapses) and a scrollable main area. See [Layout Component](/web/layout.md) for breakpoint widths and the `focus-visible` ring contract. The shared ring style is documented in [Focus Ring Design Token](/web/focus-ring.md).
+
 # Key Files
 
 | File | Responsibility |
 |------|----------------|
 | `apps/web/src/main.tsx` | App bootstrap, providers, theme init. |
 | `apps/web/src/App.tsx` | Router and route table. |
-| `apps/web/src/components/Layout.tsx` | Sidebar nav, theme toggle button, content outlet. |
+| `apps/web/src/components/Layout.tsx` | Persistent responsive sidebar, nav links, theme toggle, content outlet. |
 | `apps/web/src/pages/PlaceholderPages.tsx` | Initial placeholder content for each route. |
-| `apps/web/src/components/ui/button.tsx` | Shared button primitive (CVA variants). |
+| `apps/web/src/components/ui/button.tsx` | Shared button primitive (CVA variants) with focus-ring base. |
+| `apps/web/src/index.css` | CSS custom properties (background, foreground, muted, accent, ring) for light + dark. |
+| `apps/web/tailwind.config.ts` | Tailwind theme tokens (background, foreground, muted, accent, ring). |
 | `apps/web/src/lib/utils.ts` | `cn()` helper for conditional Tailwind classes. |
+| `apps/web/tests/layout.test.tsx` | Vitest + Testing Library tests for the sidebar. |
+
+# Tests
+
+`apps/web/tests/layout.test.tsx` (Vitest + `@testing-library/react`) covers:
+
+1. The four nav links render inside the sidebar.
+2. The active route receives the `bg-accent text-background` classes while siblings do not.
+3. Nav links and the theme toggle both carry the `focus-visible:ring-2` and `focus-visible:ring-ring` classes.
 
 # Adding a New Page
 

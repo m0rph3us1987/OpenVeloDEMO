@@ -19,6 +19,14 @@ npm install
 
 This installs all workspaces (`apps/api`, `apps/web`, `packages/types`) in one pass.
 
+For a clean, reproducible install (e.g. in CI or after a fresh clone), a `setup.sh` helper is provided at the repo root:
+
+```bash
+./setup.sh
+```
+
+It runs `npm ci` non-interactively and is the recommended way to bring up a new environment.
+
 # Configure the Database
 
 The API uses Prisma with SQLite. Set the connection string before starting the API:
