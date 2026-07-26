@@ -3,7 +3,7 @@ type: Guide
 title: Tester Walkthrough
 description: Navigation steps and expected UI behaviors for each route in the OpenVelo web app.
 tags: [guide, tester, ui]
-timestamp: 2026-07-26T11:53:07Z
+timestamp: 2026-07-26T12:57:49Z
 ---
 
 # Prerequisites
@@ -56,7 +56,11 @@ If the viewport is short, the sidebar scrolls internally (`overflow-y-auto`) ins
 
 **Expected behavior:**
 - Heading: `Ingredients`.
-- No other content (placeholder page).
+- An `Add ingredient` button, category filters, and a table of persisted ingredients.
+- Users can create, edit, and delete ingredients through forms and confirmation dialogs.
+- Loading, empty-filter, request-error, and field-validation states are visible and actionable.
+
+Follow the complete interaction steps in [Ingredients Page](/web/ingredients.md).
 
 # Route: Shopping Cart (`/shopping-cart`)
 
@@ -103,14 +107,17 @@ See [Focus Ring Design Token](/web/focus-ring.md) for the underlying token.
 
 # API Health Check
 
-The web client does not yet call the API directly, but the API can be verified separately:
+The Ingredients page calls the API through the Vite development proxy. The API can also be verified separately:
 
 ```bash
 curl http://localhost:3001/api/health
 # Expected: {"ok":true}
+
+curl http://localhost:3001/api/ingredients
+# Expected: a JSON array, initially [] for an empty database
 ```
 
-See [Health Endpoint](/api/health.md).
+See [Health Endpoint](/api/health.md) and [Ingredients API](/api/ingredients.md).
 
 # Route: NotFound (any unmatched URL, e.g. `/unknown-route` or `/recipes/new`)
 

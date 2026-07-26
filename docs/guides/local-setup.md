@@ -3,7 +3,7 @@ type: Guide
 title: Running the App Locally
 description: Step-by-step instructions for developers to install dependencies, run the API and web client, and execute the test suite.
 tags: [guide, setup, development]
-timestamp: 2026-07-26T11:39:07Z
+timestamp: 2026-07-26T12:57:49Z
 ---
 
 # Prerequisites
@@ -37,7 +37,7 @@ mkdir -p data
 npm run prisma:migrate -w @openvelo/api
 ```
 
-This creates `data/dev.db` and applies the initial migration. See [Database Schema](/database/schema.md).
+This creates `data/dev.db` and applies the current migration, including the unique ingredient-name constraint required by the [Ingredients API](/api/ingredients.md). See [Database Schema](/database/schema.md).
 
 # Run Dev Servers
 

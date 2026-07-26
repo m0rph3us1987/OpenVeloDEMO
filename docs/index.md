@@ -15,12 +15,14 @@ OpenVelo is a meal-planning application composed of an Express API, a React web 
 # API
 
 * [Health Endpoint](/api/health.md) - `GET /api/health` liveness check.
+* [Ingredients API](/api/ingredients.md) - Ingredient listing, creation, updates, deletion, validation, and error contracts.
 
 # Database
 
 * [Prisma Schema](/database/schema.md) - Models for ingredients, recipes, meal plans, cook logs, and shopping cart snapshots.
 
 # Web
+* [Ingredients Page](/web/ingredients.md) - Tester workflow and technical wiring for filtering and managing ingredients.
 * [Layout Component](/web/layout.md) - Responsive persistent sidebar navigation (NavLink), theme toggle, and content outlet.
 * [NotFound Page](/web/not-found.md) - Wildcard fallback page rendered for any unmatched route.
 * [RouterErrorElement](/web/router-error-element.md) - Root route error boundary for thrown 404 responses and unexpected errors.

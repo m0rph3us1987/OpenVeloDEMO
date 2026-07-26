@@ -3,7 +3,7 @@ type: Database
 title: Prisma Schema
 description: Core data model for OpenVelo — ingredients, recipes, meal plans, cook logs, and shopping cart snapshots.
 tags: [database, prisma, schema]
-timestamp: 2026-07-26T11:39:07Z
+timestamp: 2026-07-26T12:57:49Z
 ---
 
 # Overview
@@ -17,7 +17,7 @@ Source of truth: `apps/api/prisma/schema.prisma`. The data layer is SQLite via P
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `String` (cuid) | Primary key. |
-| `name` | `String` | Display name. |
+| `name` | `String` | Unique display name; enforced by the `Ingredient_name_key` database index. |
 | `category` | `String` | One of [IngredientCategory](/packages/types.md) values. |
 | `defaultUnit` | `String` | One of [BaseUnit](/packages/types.md) values. |
 | `createdAt` | `DateTime` | Auto-set on create. |
@@ -97,6 +97,8 @@ Ingredient ──< RecipeIngredient >── Recipe
 ```
 
 # Migrations
+
+The migration at `apps/api/prisma/migrations/20260726124114_ingredient_name_unique/migration.sql` creates the current SQLite tables, relationship indexes, and the unique `Ingredient.name` index used by the [Ingredients API](/api/ingredients.md) to return `409 NAME_CONFLICT` for duplicates.
 
 | Script | Purpose |
 |--------|---------|

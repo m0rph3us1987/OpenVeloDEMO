@@ -3,7 +3,7 @@ type: Architecture
 title: API Server
 description: Express server wiring, middleware order, and bootstrap entry points.
 tags: [api, express, server]
-timestamp: 2026-07-26T11:39:07Z
+timestamp: 2026-07-26T12:57:49Z
 ---
 
 # Entry Point
@@ -16,7 +16,8 @@ The API is bootstrapped from `apps/api/src/server.ts`. It reads `PORT` (default 
 
 1. **CORS** — origin from `WEB_ORIGIN` env var (default `http://localhost:5173`), credentials enabled.
 2. **JSON body parser** — `express.json()`.
-3. **Routes** — currently only `GET /api/health`.
+3. **Health route** — `GET /api/health` returns process liveness.
+4. **Ingredients router** — `/api/ingredients` delegates to `createIngredientsRouter()` with a supplied or newly created Prisma client. See [Ingredients API](/api/ingredients.md).
 
 # Environment Variables
 
@@ -31,20 +32,23 @@ The API is bootstrapped from `apps/api/src/server.ts`. It reads `PORT` (default 
 | File | Responsibility |
 |------|----------------|
 | `apps/api/src/server.ts` | Bootstraps the HTTP server. |
-| `apps/api/src/app.ts` | Composes middleware and routes; exported for tests. |
+| `apps/api/src/app.ts` | Composes middleware and routes, creates or accepts a Prisma client, and exports the app for tests. |
+| `apps/api/src/ingredients.ts` | Implements ingredient validation and CRUD routes. See [Ingredients API](/api/ingredients.md). |
 | `apps/api/prisma/schema.prisma` | Data model (see [Database Schema](/database/schema.md)). |
 | `apps/api/tests/health.test.ts` | Supertest check for `/api/health`. |
+| `apps/api/tests/ingredients.test.ts` | Supertest coverage for ingredient CRUD and errors. |
 
 # Registering New Routes
 
-Add new route handlers inside `createApp()` in `apps/api/src/app.ts`, after the CORS and JSON middleware. Any controller module that needs the Prisma client should import it from `@prisma/client` once it is initialized.
+`createApp(prisma?)` accepts an optional Prisma client for isolated tests. Register routers in `apps/api/src/app.ts` after the CORS and JSON middleware, and inject the client into data-backed routers rather than constructing clients inside route handlers.
 
 # Routing Diagram
 
 ```
 Client (apps/web)
   └── HTTP ──► Express (apps/api/src/app.ts)
-                    ├── CORS
-                    ├── JSON parser
-                    └── /api/health
+                     ├── CORS
+                     ├── JSON parser
+                     ├── /api/health
+                     └── /api/ingredients ──► Prisma ──► SQLite
 ```
