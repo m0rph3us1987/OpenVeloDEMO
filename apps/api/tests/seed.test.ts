@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PrismaClient } from '@prisma/client';
-import { seed, SEED_INGREDIENTS, SEED_RECIPES } from '../src/seed.js';
+import { seed, shouldAutoSeed, SEED_INGREDIENTS, SEED_RECIPES } from '../src/seed.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,5 +88,35 @@ describe('seed()', () => {
     expect(ingredients).toHaveLength(SEED_INGREDIENTS.length);
     const recipes = await prisma.recipe.findMany();
     expect(recipes).toHaveLength(SEED_RECIPES.length);
+  });
+
+  it('auto-seeds recipes when only ingredients exist (boot-time guard)', async () => {
+    // Simulate the state left by ensure-db.mjs after the SQL seed has run:
+    // seven Ingredient rows pre-populated, Recipe table empty.
+    for (const ing of SEED_INGREDIENTS) {
+      await prisma.ingredient.create({
+        data: { name: ing.name, category: ing.category, defaultUnit: ing.baseUnit },
+      });
+    }
+    const ingCount = await prisma.ingredient.count();
+    const recCount = await prisma.recipe.count();
+    expect(ingCount).toBe(SEED_INGREDIENTS.length);
+    expect(recCount).toBe(0);
+
+    expect(
+      shouldAutoSeed({ ingredientCount: ingCount, recipeCount: recCount }),
+    ).toBe(true);
+
+    const result = await seed(prisma);
+    expect(result.ingredientsCreated).toBe(0);
+    expect(result.recipesCreated).toBe(SEED_RECIPES.length);
+    expect(await prisma.recipe.count()).toBe(SEED_RECIPES.length);
+
+    // And once recipes are populated, the guard flips to false.
+    const ingCountAfter = await prisma.ingredient.count();
+    const recCountAfter = await prisma.recipe.count();
+    expect(
+      shouldAutoSeed({ ingredientCount: ingCountAfter, recipeCount: recCountAfter }),
+    ).toBe(false);
   });
 });
