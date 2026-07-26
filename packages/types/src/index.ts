@@ -19,6 +19,15 @@ export const INGREDIENT_CATEGORIES: readonly IngredientCategory[] = [
   IngredientCategory.Other,
 ];
 
+export const INGREDIENT_CATEGORY_LABELS: Record<IngredientCategory, string> = {
+  [IngredientCategory.Meat]: 'Meat',
+  [IngredientCategory.Vegetables]: 'Vegetables',
+  [IngredientCategory.Dairy]: 'Dairy',
+  [IngredientCategory.Grains]: 'Grains',
+  [IngredientCategory.Spices]: 'Spices',
+  [IngredientCategory.Other]: 'Other',
+};
+
 export const BaseUnit = {
   g: 'g',
   ml: 'ml',
@@ -32,3 +41,9 @@ export const BASE_UNITS: readonly BaseUnit[] = [
   BaseUnit.ml,
   BaseUnit.pcs,
 ];
+
+export const BASE_UNIT_LABELS: Record<BaseUnit, string> = {
+  [BaseUnit.g]: 'g',
+  [BaseUnit.ml]: 'ml',
+  [BaseUnit.pcs]: 'pcs',
+};

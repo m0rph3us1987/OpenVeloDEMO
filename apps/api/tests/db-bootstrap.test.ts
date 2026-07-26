@@ -47,14 +47,19 @@ describe('ensure-db bootstrap', () => {
     const target = await bootstrap(deps as never);
     expect(target.url).toBe(`file:${PATHS.PERSISTENT_DB}`);
     expect(target.ownsFile).toBe(true);
-    // No `prisma db push`, only `prisma db execute` for the seed.
-    expect(deps.execFileSync).toHaveBeenCalledTimes(1);
-    const args = (deps.execFileSync.mock.calls[0]?.[1] as string[]) ?? [];
-    expect(args[1]).toBe('db');
-    expect(args[2]).toBe('execute');
+    // No `prisma db push`; only `prisma db execute` for the seed and constraints.
+    expect(deps.execFileSync).toHaveBeenCalledTimes(2);
+    const firstArgs = (deps.execFileSync.mock.calls[0]?.[1] as string[]) ?? [];
+    const secondArgs = (deps.execFileSync.mock.calls[1]?.[1] as string[]) ?? [];
+    expect(firstArgs[1]).toBe('db');
+    expect(firstArgs[2]).toBe('execute');
+    expect(firstArgs[firstArgs.length - 1]).toBe(PATHS.SEED_PATH);
+    expect(secondArgs[1]).toBe('db');
+    expect(secondArgs[2]).toBe('execute');
+    expect(secondArgs[secondArgs.length - 1]).toBe(PATHS.CONSTRAINTS_PATH);
   });
 
-  it('runs `prisma db push` then `prisma db execute` when the file is missing', async () => {
+  it('runs `prisma db push` then two `prisma db execute` calls when the file is missing', async () => {
     const deps = makeDeps({
       existsSync: vi.fn(() => false),
       mkdirSync: vi.fn(),
@@ -62,13 +67,18 @@ describe('ensure-db bootstrap', () => {
     const target = await bootstrap(deps as never);
     expect(target.url).toBe(`file:${PATHS.PERSISTENT_DB}`);
     expect(deps.mkdirSync).toHaveBeenCalledWith(PATHS.PERSISTENT_DIR, { recursive: true });
-    expect(deps.execFileSync).toHaveBeenCalledTimes(2);
+    expect(deps.execFileSync).toHaveBeenCalledTimes(3);
     const firstArgs = (deps.execFileSync.mock.calls[0]?.[1] as string[]) ?? [];
     const secondArgs = (deps.execFileSync.mock.calls[1]?.[1] as string[]) ?? [];
+    const thirdArgs = (deps.execFileSync.mock.calls[2]?.[1] as string[]) ?? [];
     expect(firstArgs[1]).toBe('db');
     expect(firstArgs[2]).toBe('push');
     expect(secondArgs[1]).toBe('db');
     expect(secondArgs[2]).toBe('execute');
+    expect(secondArgs[secondArgs.length - 1]).toBe(PATHS.SEED_PATH);
+    expect(thirdArgs[1]).toBe('db');
+    expect(thirdArgs[2]).toBe('execute');
+    expect(thirdArgs[thirdArgs.length - 1]).toBe(PATHS.CONSTRAINTS_PATH);
     // DATABASE_URL is passed via env on every execFileSync call.
     for (const call of deps.execFileSync.mock.calls) {
       const env = call[2] as { env: Record<string, string> };
@@ -96,8 +106,8 @@ describe('ensure-db bootstrap', () => {
     const target = await bootstrap(deps as never);
     expect(target.url).toBe('file:/tmp/explicit.db');
     expect(target.ownsFile).toBe(false);
-    // Only the seed step runs because the explicit file already exists.
+    // Only the seed + constraints steps run because the explicit file already exists.
     expect(deps.access).not.toHaveBeenCalled();
-    expect(deps.execFileSync).toHaveBeenCalledTimes(1);
+    expect(deps.execFileSync).toHaveBeenCalledTimes(2);
   });
 });

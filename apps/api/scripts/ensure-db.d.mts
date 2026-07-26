@@ -4,6 +4,7 @@ export const PATHS: {
   readonly LOCAL_DIR: string;
   readonly LOCAL_DB: string;
   readonly SCHEMA_PATH: string;
+  readonly CONSTRAINTS_PATH: string;
   readonly SEED_PATH: string;
   readonly PRISMA_BIN: string;
 };

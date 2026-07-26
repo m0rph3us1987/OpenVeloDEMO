@@ -36,8 +36,11 @@ model RecipeIngredient {
   recipeId     String
   ingredientId String
   quantity     Float
+  // App-validated enum (g|ml|pcs). The database also enforces the set via
+  // a CHECK constraint in the initial migration and an idempotent trigger
+  // installed by apps/api/scripts/ensure-db.mjs at bootstrap.
   unit         String
-  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
 
   @@index([recipeId])

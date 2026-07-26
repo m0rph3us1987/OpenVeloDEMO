@@ -16,10 +16,6 @@ export function Dashboard(): JSX.Element {
   );
 }
 
-export function Recipes(): JSX.Element {
-  return <h2 className="text-2xl font-semibold">Recipes</h2>;
-}
-
 export function ShoppingCart(): JSX.Element {
   return <h2 className="text-2xl font-semibold">Shopping Cart</h2>;
 }

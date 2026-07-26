@@ -2,6 +2,7 @@ import cors from 'cors';
 import express, { type Express } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { createIngredientsRouter } from './ingredients.js';
+import { createRecipesRouter } from './recipes.js';
 
 export function createApp(prisma?: PrismaClient): Express {
   const app = express();
@@ -21,6 +22,7 @@ export function createApp(prisma?: PrismaClient): Express {
 
   const client = prisma ?? new PrismaClient();
   app.use('/api/ingredients', createIngredientsRouter((client as PrismaClient)));
+  app.use('/api/recipes', createRecipesRouter((client as PrismaClient)));
 
   return app;
 }
